@@ -1,0 +1,18 @@
+[package]
+name = "skill-loop-verifier"
+version = "0.1.0"
+edition = "2021"
+description = "Verify skill-based agent loops — parse, validate, graph, simulate, and formally prove correctness"
+
+[dependencies]
+pulldown-cmark = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_yml = "0.0.13"
+petgraph = "0.6"
+regex = "1.10"
+walkdir = "2.5"
+thiserror = "2.0"
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.10"
