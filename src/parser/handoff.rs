@@ -82,21 +82,32 @@ pub fn parse_transition_rules(content: &str, skill_name: &str) -> Vec<Transition
 /// Expects markdown tables with columns: from, to, trigger, condition
 pub fn parse_handoff_table(content: &str, skill_name: &str) -> Vec<TransitionRule> {
     let mut rules = Vec::new();
-    let mut in_table = false;
+    let mut in_data = false;
     let mut header_map: HashMap<usize, String> = HashMap::new();
+    let mut prev_line: Option<String> = None;
 
     for line in content.lines() {
         let trimmed = line.trim();
 
-        // Detect table separator line
+        // Detect table separator line (|----|----|)
         if trimmed.starts_with('|') && trimmed.contains("---") {
-            // Parse the preceding header line from a buffer pattern
-            // We handle this differently: look for lines with | col1 | col2 | ... |
-            in_table = true;
+            // The line before this separator is the header
+            if let Some(ref header_line) = prev_line {
+                let cols: Vec<&str> = header_line
+                    .split('|')
+                    .map(|s| s.trim())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                for (i, col) in cols.iter().enumerate() {
+                    header_map.insert(i, col.to_lowercase());
+                }
+            }
+            in_data = true;
+            prev_line = None;
             continue;
         }
 
-        if in_table && trimmed.starts_with('|') {
+        if in_data && trimmed.starts_with('|') {
             let cols: Vec<&str> = trimmed
                 .split('|')
                 .map(|s| s.trim())
@@ -107,18 +118,9 @@ pub fn parse_handoff_table(content: &str, skill_name: &str) -> Vec<TransitionRul
                 continue;
             }
 
-            // First non-separator row is the header
-            if header_map.is_empty() {
-                for (i, col) in cols.iter().enumerate() {
-                    header_map.insert(i, col.to_lowercase());
-                }
-                continue;
-            }
-
             let mut from = String::new();
             let mut to = String::new();
             let mut trigger = String::new();
-            let mut condition: Option<String> = None;
 
             for (i, col) in cols.iter().enumerate() {
                 let val = col.trim().to_string();
@@ -129,7 +131,6 @@ pub fn parse_handoff_table(content: &str, skill_name: &str) -> Vec<TransitionRul
                     Some("from") => from = val,
                     Some("to") => to = val,
                     Some("trigger") => trigger = val,
-                    Some("condition") => condition = Some(val),
                     _ => {}
                 }
             }
@@ -146,14 +147,12 @@ pub fn parse_handoff_table(content: &str, skill_name: &str) -> Vec<TransitionRul
                     defined_in: skill_name.to_string(),
                 });
             }
-
-            // After parsing one data row in handoff table, stop (we don't expect more
-            // table rows to be relevant)
-            in_table = false;
         }
+
+        prev_line = Some(trimmed.to_string());
     }
 
-    // If we didn't find a table, look for "transition" style rules too
+    // If no table rules found, fall back to transition rule parser
     if rules.is_empty() {
         rules = parse_transition_rules(content, skill_name);
     }

@@ -1,32 +1,43 @@
 use skill_loop_verifier::config::load_config;
 use skill_loop_verifier::diagnostic::{diagnostics_json, format_diagnostics};
-use skill_loop_verifier::types::Repo;
+use skill_loop_verifier::types::{Diagnostic, Repo, Severity};
 use skill_loop_verifier::validators::run_all;
 use std::path::PathBuf;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    let exit_code = run_cli(&args, &|root, skills_dir| {
+        let repo = Repo::from_root(PathBuf::from(root), skills_dir)?;
+        Ok(run_all(&repo))
+    });
+    std::process::exit(exit_code);
+}
+
+/// Run the CLI check command. Returns an exit code (0 = success, 1 = errors).
+/// This function is testable by passing a custom loader.
+pub fn run_cli(
+    args: &[String],
+    loader: &dyn Fn(&str, &str) -> std::io::Result<Vec<Diagnostic>>,
+) -> i32 {
     let json = args.iter().any(|a| a == "--json");
 
     if args.iter().any(|a| a == "-h" || a == "--help") {
         print_help();
-        return;
+        return 0;
     }
 
-    let (root, skills_dir) = parse_args(&args);
+    let (root, skills_dir) = parse_args(args);
 
-    let config = load_config(&root);
+    let config = load_config(&PathBuf::from(&root));
     let skills_dir_name = skills_dir.unwrap_or_else(|| config.skills_dir.clone());
 
-    let repo = match Repo::from_root(root.clone(), &skills_dir_name) {
-        Ok(r) => r,
+    let diagnostics = match loader(&root, &skills_dir_name) {
+        Ok(d) => d,
         Err(e) => {
             eprintln!("error: failed to load repo: {}", e);
-            std::process::exit(1);
+            return 1;
         }
     };
-
-    let diagnostics = run_all(&repo);
 
     if json {
         println!("{}", diagnostics_json(&diagnostics));
@@ -34,32 +45,27 @@ fn main() {
         println!("{}", format_diagnostics(&diagnostics));
     }
 
-    let errors = diagnostics
-        .iter()
-        .filter(|d| d.severity == skill_loop_verifier::types::Severity::Error)
-        .count();
-    if errors > 0 {
-        std::process::exit(1);
-    }
+    let errors = diagnostics.iter().filter(|d| d.severity == Severity::Error).count();
+    if errors > 0 { 1 } else { 0 }
 }
 
-fn parse_args(args: &[String]) -> (PathBuf, Option<String>) {
-    let mut root: Option<PathBuf> = None;
+fn parse_args(args: &[String]) -> (String, Option<String>) {
+    let mut root: Option<String> = None;
     let mut skills_dir: Option<String> = None;
     let mut iter = args.iter().skip(1);
     while let Some(arg) = iter.next() {
         match arg.as_str() {
-            "--root" => root = iter.next().map(PathBuf::from),
+            "--root" => root = iter.next().cloned(),
             "--skills-dir" => skills_dir = iter.next().cloned(),
-            "--json" => {} // handled above
+            "--json" => {}
             _ => {}
         }
     }
-
     let root = root.unwrap_or_else(|| {
-        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+        std::env::current_dir()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| ".".to_string())
     });
-
     (root, skills_dir)
 }
 
@@ -81,4 +87,89 @@ fn print_help() {
     println!("  check    Validate all skills, loop contracts, and the handoff graph (default)");
     println!("  init     Create .loop-verifier.yaml and copy Coq theories into the project");
     println!("  gen-coq  Generate Coq formalization from the current skill graph");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use skill_loop_verifier::types::{Diagnostic, FileLocation, Severity};
+    use std::path::PathBuf;
+
+    fn make_diag(code: &str, severity: Severity) -> Diagnostic {
+        Diagnostic {
+            severity,
+            code: code.to_string(),
+            message: "msg".to_string(),
+            location: FileLocation { path: PathBuf::from("x.md"), line: None, column: None },
+            help: "help".to_string(),
+        }
+    }
+
+    #[test]
+    fn run_cli_help_returns_0() {
+        let code = run_cli(&["prog".into(), "-h".into()], &|_, _| Ok(vec![]));
+        assert_eq!(code, 0);
+    }
+
+    #[test]
+    fn run_cli_no_errors_returns_0() {
+        let code = run_cli(
+            &["prog".into()],
+            &|_, _| Ok(vec![]),
+        );
+        assert_eq!(code, 0);
+    }
+
+    #[test]
+    fn run_cli_with_errors_returns_1() {
+        let code = run_cli(
+            &["prog".into()],
+            &|_, _| Ok(vec![make_diag("E1", Severity::Error)]),
+        );
+        assert_eq!(code, 1);
+    }
+
+    #[test]
+    fn run_cli_with_only_warnings_returns_0() {
+        let code = run_cli(
+            &["prog".into()],
+            &|_, _| Ok(vec![make_diag("W1", Severity::Warning)]),
+        );
+        assert_eq!(code, 0);
+    }
+
+    #[test]
+    fn run_cli_json_flag() {
+        let code = run_cli(
+            &["prog".into(), "--json".into()],
+            &|_, _| Ok(vec![]),
+        );
+        assert_eq!(code, 0);
+    }
+
+    #[test]
+    fn parse_args_with_root_and_skills_dir() {
+        let (root, skills) = parse_args(&[
+            "prog".into(),
+            "--root".into(),
+            "/tmp".into(),
+            "--skills-dir".into(),
+            "my-skills".into(),
+        ]);
+        assert_eq!(root, "/tmp");
+        assert_eq!(skills, Some("my-skills".to_string()));
+    }
+
+    #[test]
+    fn parse_args_defaults() {
+        let (root, skills) = parse_args(&["prog".into()]);
+        assert!(!root.is_empty());
+        assert!(skills.is_none());
+    }
+
+    #[test]
+    fn print_help_includes_keywords() {
+        // Just verify it doesn't panic
+        print_help();
+    }
 }

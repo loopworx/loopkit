@@ -177,10 +177,14 @@ fn check_transition_syntax(
 
     // Find the State Transition Rule section
     if let Some(body) = extract_section(content, "State Transition Rule") {
-        let has_transition = body.contains("transition ");
+        // Check for `transition <from> → <to>` pattern (or `->` ascii fallback)
+        let has_transition_directive = body.lines().any(|line| {
+            let trimmed = line.trim();
+            trimmed.starts_with("transition ") && (trimmed.contains('→') || trimmed.contains("->"))
+        });
         let has_table = body.contains("| from") || body.contains("| From");
 
-        if !has_transition && !has_table {
+        if !has_transition_directive && !has_table {
             diags.push(Diagnostic {
                 severity: Severity::Error,
                 code: "loop-no-transitions".to_string(),
@@ -207,4 +211,23 @@ fn extract_section(content: &str, heading: &str) -> Option<String> {
     let after = &content[start + marker.len()..];
     let end = after.find("\n## ").unwrap_or(after.len());
     Some(after[..end].trim().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_section_finds_content() {
+        let content = "## Entry\na\n\n## State Transition Rule\nprose here\n\n## Halt\nh\n";
+        let found = extract_section(content, "State Transition Rule").unwrap();
+        assert_eq!(found, "prose here");
+    }
+
+    #[test]
+    fn extract_section_last_section() {
+        let content = "## State Transition Rule\nlast prose\n";
+        let found = extract_section(content, "State Transition Rule").unwrap();
+        assert_eq!(found, "last prose");
+    }
 }
