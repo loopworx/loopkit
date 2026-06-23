@@ -74,19 +74,12 @@ fn print_help() {
     println!();
     println!("USAGE:");
     println!("  skill-loop-verifier [OPTIONS]");
-    println!("  skill-loop-verifier init [--root <path>]");
-    println!("  skill-loop-verifier gen-coq [--root <path>]");
     println!();
     println!("OPTIONS:");
     println!("  --root <path>       Repository root (default: current directory)");
     println!("  --skills-dir <dir>  Skills directory name (default: from .loop-verifier.yaml)");
     println!("  --json              Output diagnostics as JSON");
     println!("  -h, --help          Show this help");
-    println!();
-    println!("COMMANDS:");
-    println!("  check    Validate all skills, loop contracts, and the handoff graph (default)");
-    println!("  init     Create .loop-verifier.yaml and copy Coq theories into the project");
-    println!("  gen-coq  Generate Coq formalization from the current skill graph");
 }
 
 #[cfg(test)]

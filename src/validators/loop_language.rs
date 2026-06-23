@@ -116,8 +116,8 @@ fn check_verb_vocabulary(
                 && is_likely_action_verb(verb, line)
             {
                 diags.push(Diagnostic {
-                severity: Severity::Error,
-                code: "loop-nonstandard-verb".to_string(),
+                    severity: Severity::Warning,
+                    code: "loop-nonstandard-verb".to_string(),
                     message: format!(
                         "Non-standard verb '{}' in LOOP.md for `{}` at line {}",
                         verb,
