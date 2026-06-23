@@ -45,7 +45,7 @@ pub fn run_cli(
         println!("{}", format_diagnostics(&diagnostics));
     }
 
-    let errors = diagnostics.iter().filter(|d| d.severity == Severity::Error).count();
+    let errors = diagnostics.iter().filter(|d| matches!(d.severity, Severity::Error | Severity::Warning)).count();
     if errors > 0 { 1 } else { 0 }
 }
 
@@ -130,10 +130,10 @@ mod tests {
     }
 
     #[test]
-    fn run_cli_with_only_warnings_returns_0() {
+    fn run_cli_with_only_warnings_or_info_returns_0() {
         let code = run_cli(
             &["prog".into()],
-            &|_, _| Ok(vec![make_diag("W1", Severity::Warning)]),
+            &|_, _| Ok(vec![make_diag("I1", Severity::Info)]),
         );
         assert_eq!(code, 0);
     }

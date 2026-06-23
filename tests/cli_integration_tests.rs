@@ -52,7 +52,7 @@ fn main_help_flag_returns_zero() {
 }
 
 #[test]
-fn main_check_empty_skills_reports_warning() {
+fn main_check_empty_skills_reports_error() {
     let dir = tempfile::TempDir::new().unwrap();
     // Create skills dir with no skills
     std::fs::create_dir_all(dir.path().join("skills")).unwrap();
@@ -61,6 +61,6 @@ fn main_check_empty_skills_reports_warning() {
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .output()
         .unwrap();
-    // No errors expected
-    assert!(output.status.success());
+    // Empty graph is now an error, not a warning
+    assert!(!output.status.success());
 }

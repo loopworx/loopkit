@@ -37,8 +37,8 @@ pub fn validate_loop_sections(repo: &Repo) -> Vec<Diagnostic> {
             // Check section ordering
             if !contract.section_order_valid {
                 diags.push(Diagnostic {
-                    severity: Severity::Warning,
-                    code: "loop-section-order".to_string(),
+                severity: Severity::Error,
+                code: "loop-section-order".to_string(),
                     message: format!(
                         "LOOP.md for `{}` has sections in non-canonical order",
                         skill.name
@@ -56,8 +56,8 @@ pub fn validate_loop_sections(repo: &Repo) -> Vec<Diagnostic> {
             for section in &contract.sections {
                 if let crate::types::LoopSection::Unknown(body) = section {
                     diags.push(Diagnostic {
-                        severity: Severity::Warning,
-                        code: "loop-unknown-section".to_string(),
+                    severity: Severity::Error,
+                    code: "loop-unknown-section".to_string(),
                         message: format!(
                             "LOOP.md for `{}` has unknown section with body: '{}...'; use only the 7 canonical headings.",
                             skill.name,

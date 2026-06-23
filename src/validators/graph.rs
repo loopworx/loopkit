@@ -89,8 +89,8 @@ pub fn validate_graph(repo: &Repo) -> Vec<Diagnostic> {
                 .any(|e| e.from == edge.from && e.to != edge.from);
             if !has_other_outbound {
                 diags.push(Diagnostic {
-                    severity: Severity::Warning,
-                    code: "graph-self-loop-only".to_string(),
+                severity: Severity::Error,
+                code: "graph-self-loop-only".to_string(),
                     message: format!(
                         "State '{}' has a self-loop as its only transition (may loop forever)",
                         edge.from

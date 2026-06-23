@@ -33,9 +33,9 @@ fn given_error_diagnostic_when_formatting_then_shows_error_code_and_help() {
 }
 
 #[test]
-fn given_warning_diagnostic_when_formatting_then_counts_correctly() {
-    let d = Diagnostic {
-        severity: Severity::Warning,
+fn given_multiple_error_diagnostics_when_formatting_then_counts_correctly() {
+    let d1 = Diagnostic {
+        severity: Severity::Error,
         code: "W001".to_string(),
         message: "careful".to_string(),
         location: FileLocation {
@@ -45,9 +45,20 @@ fn given_warning_diagnostic_when_formatting_then_counts_correctly() {
         },
         help: "note".to_string(),
     };
-    let s = format_diagnostics(&[d]);
-    assert!(s.contains("WARNING"));
-    assert!(s.contains("0 error(s), 1 warning(s)"));
+    let d2 = Diagnostic {
+        severity: Severity::Error,
+        code: "W002".to_string(),
+        message: "also careful".to_string(),
+        location: FileLocation {
+            path: PathBuf::from("y.md"),
+            line: None,
+            column: None,
+        },
+        help: "also note".to_string(),
+    };
+    let s = format_diagnostics(&[d1, d2]);
+    assert!(s.contains("ERROR"));
+    assert!(s.contains("2 error(s)"));
 }
 
 #[test]

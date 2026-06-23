@@ -10,7 +10,7 @@ pub fn format_diagnostics(diagnostics: &[Diagnostic]) -> String {
     for d in diagnostics {
         let prefix = match d.severity {
             Severity::Error => "ERROR",
-            Severity::Warning => "WARNING",
+            Severity::Warning => "ERROR",
             Severity::Info => "INFO",
         };
         out.push_str(&format!(
@@ -23,12 +23,12 @@ pub fn format_diagnostics(diagnostics: &[Diagnostic]) -> String {
         ));
     }
 
-    let errors = diagnostics.iter().filter(|d| d.severity == Severity::Error).count();
-    let warnings = diagnostics.iter().filter(|d| d.severity == Severity::Warning).count();
+    let errors = diagnostics.iter().filter(|d| d.severity == Severity::Error || d.severity == Severity::Warning).count();
+    let infos = diagnostics.iter().filter(|d| d.severity == Severity::Info).count();
     out.push_str(&format!(
-        "\n{} error(s), {} warning(s), {} total\n",
+        "\n{} error(s), {} info(s), {} total\n",
         errors,
-        warnings,
+        infos,
         diagnostics.len()
     ));
 

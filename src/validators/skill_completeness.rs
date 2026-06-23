@@ -96,7 +96,7 @@ pub fn validate_skill_completeness(repo: &Repo) -> Vec<Diagnostic> {
         let rules_count = sections.iter().filter(|s| *s == "Rules").count();
         if rules_count > 1 {
             diags.push(Diagnostic {
-                severity: Severity::Warning,
+                severity: Severity::Error,
                 code: "skill-duplicate-rules".to_string(),
                 message: format!(
                     "Skill `{}` has {} '## Rules' sections (duplicate).",
@@ -125,7 +125,7 @@ pub fn validate_loop_completeness(repo: &Repo) -> Vec<Diagnostic> {
 
         if has_transitions && !skill.has_loop_md {
             diags.push(Diagnostic {
-                severity: Severity::Warning,
+                severity: Severity::Error,
                 code: "loop-missing-for-transition-skill".to_string(),
                 message: format!(
                     "Skill `{}` defines transition rules but has no LOOP.md",

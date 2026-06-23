@@ -8,7 +8,7 @@ pub fn validate_constraints(repo: &Repo) -> Vec<Diagnostic> {
     // Graph should not be empty
     if repo.handoff_graph.nodes.is_empty() {
         diags.push(Diagnostic {
-            severity: Severity::Warning,
+            severity: Severity::Error,
             code: "constraints-empty-graph".to_string(),
             message: "No states found in the handoff graph. No transition rules defined in any LOOP.md or HANDOFFS.md.".to_string(),
             location: FileLocation {
@@ -26,8 +26,8 @@ pub fn validate_constraints(repo: &Repo) -> Vec<Diagnostic> {
             if let Some(ref target) = rule.handoff_skill {
                 if !repo.skills.iter().any(|s| s.name == *target) {
                     diags.push(Diagnostic {
-                        severity: Severity::Warning,
-                        code: "constraints-unknown-handoff-target".to_string(),
+                    severity: Severity::Error,
+                    code: "constraints-unknown-handoff-target".to_string(),
                         message: format!(
                             "Skill `{}` transitions to unknown handoff target `{}`",
                             skill.name, target

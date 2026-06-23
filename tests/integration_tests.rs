@@ -162,7 +162,7 @@ transition ready-for-dev → done
 halt stall
 
 ## Handoff Target
-handoff done to dev
+handoff skill-a to dev
 ");
 
     let repo = Repo::from_root(dir.path().to_path_buf(), "skills").unwrap();

@@ -238,7 +238,7 @@ transition loop-state → loop-state
 fn given_well_formed_graph_when_validating_then_no_errors() {
     let dir = tempfile::TempDir::new().unwrap();
     write_skill(&dir, "dev", "skill-a", &minimal_skill("skill-a", "L2-GUIDED"));
-    write_loop(&dir, "dev", "skill-a", &minimal_loop_with_transition("entry", "done", "done"));
+    write_loop(&dir, "dev", "skill-a", &minimal_loop_with_transition("entry", "done", "skill-a"));
     let repo = make_repo(&dir);
     let diags = validate_graph(&repo);
     assert!(diags.is_empty());
@@ -277,7 +277,7 @@ fn given_two_skills_forming_complete_graph_when_running_all_validators_then_no_e
     write_skill(&dir, "dev", "skill-a", &minimal_skill("skill-a", "L2-GUIDED"));
     write_loop(&dir, "dev", "skill-a", &minimal_loop_with_transition("a", "b", "skill-b"));
     write_skill(&dir, "dev", "skill-b", &minimal_skill("skill-b", "L2-GUIDED"));
-    write_loop(&dir, "dev", "skill-b", &minimal_loop_with_transition("b", "done", "done"));
+    write_loop(&dir, "dev", "skill-b", &minimal_loop_with_transition("b", "done", "skill-a"));
     let repo = make_repo(&dir);
     let diags = run_all(&repo);
     let errors: Vec<_> = diags.iter().filter(|d| d.severity == Severity::Error).collect();
