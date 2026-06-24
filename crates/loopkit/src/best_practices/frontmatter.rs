@@ -205,7 +205,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     // Check for unknown frontmatter keys (beyond spec + common extensions)
     let known_keys: &[&str] = &[
         "name", "description", "license", "compatibility", "metadata",
-        "allowed-tools", "level", "owner", "trigger",
+        "allowed-tools", "level", "owner", "trigger", "category",
     ];
     for key in raw_frontmatter.keys() {
         if !known_keys.contains(&key.as_str()) && !key.starts_with("x-") {

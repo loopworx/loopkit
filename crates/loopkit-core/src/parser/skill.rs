@@ -210,11 +210,16 @@ pub fn parse_skill_dir(dir: &Path) -> Result<Option<Skill>, Vec<Diagnostic>> {
 
     let sections = parse_sections(&content);
 
-    let category = dir
-        .parent()
-        .and_then(|p| p.file_name())
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
+    let category = frontmatter
+        .get("category")
+        .cloned()
+        .unwrap_or_else(|| {
+            // Legacy: derive category from parent directory for nested structure
+            dir.parent()
+                .and_then(|p| p.file_name())
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default()
+        });
 
     Ok(Some(Skill {
         name,
