@@ -95,7 +95,9 @@ mod tests {
         let skills = vec![make_skill("my-skill")];
         let transitions = vec![t("a", "running-desk-checks")];
         let diags = validate(&transitions, &skills, &config);
-        assert!(diags.iter().any(|d| d.code == "constraints-unknown-handoff-target"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "constraints-unknown-handoff-target"));
     }
 
     #[test]
@@ -113,6 +115,8 @@ mod tests {
         let skills = vec![make_skill("running-desk-checks"), make_skill("my-skill")];
         let transitions = vec![t("a", "running-desk-checks")];
         let diags = validate(&transitions, &skills, &config);
-        assert!(diags.iter().all(|d| d.code != "constraints-unknown-handoff-target"));
+        assert!(diags
+            .iter()
+            .all(|d| d.code != "constraints-unknown-handoff-target"));
     }
 }

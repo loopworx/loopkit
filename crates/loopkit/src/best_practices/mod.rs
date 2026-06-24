@@ -96,7 +96,10 @@ mod tests {
         let s2 = make_skill("", "", dir2.path().to_path_buf(), md2);
 
         let diags = check_all(&[s1, s2], false);
-        let missing_name_count = diags.iter().filter(|d| d.code == "skill-missing-name").count();
+        let missing_name_count = diags
+            .iter()
+            .filter(|d| d.code == "skill-missing-name")
+            .count();
         assert_eq!(missing_name_count, 2);
     }
 

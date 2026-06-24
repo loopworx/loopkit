@@ -131,7 +131,11 @@ pub fn parse_handoff_table(content: &str, skill_name: &str) -> Vec<TransitionRul
                 rules.push(TransitionRule {
                     from,
                     to,
-                    trigger: if trigger.is_empty() { None } else { Some(trigger) },
+                    trigger: if trigger.is_empty() {
+                        None
+                    } else {
+                        Some(trigger)
+                    },
                     handoff_target: None,
                     handoff_agent: None,
                     halt_reason: None,
@@ -300,8 +304,14 @@ transition in-dev → in-deskcheck
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].from, "in-dev");
         assert_eq!(rules[0].to, "in-deskcheck");
-        assert_eq!(rules[0].trigger.as_deref(), Some("all acceptance tests green"));
-        assert_eq!(rules[0].handoff_target.as_deref(), Some("running-desk-checks"));
+        assert_eq!(
+            rules[0].trigger.as_deref(),
+            Some("all acceptance tests green")
+        );
+        assert_eq!(
+            rules[0].handoff_target.as_deref(),
+            Some("running-desk-checks")
+        );
         assert_eq!(rules[0].handoff_agent.as_deref(), Some("qa-agent"));
     }
 

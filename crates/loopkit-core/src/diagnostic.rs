@@ -45,9 +45,18 @@ pub fn diagnostics_json(diagnostics: &[Diagnostic], skills_checked: usize) -> St
         summary: Summary,
     }
 
-    let errors = diagnostics.iter().filter(|d| d.severity == Severity::Error).count();
-    let warnings = diagnostics.iter().filter(|d| d.severity == Severity::Warning).count();
-    let info = diagnostics.iter().filter(|d| d.severity == Severity::Info).count();
+    let errors = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .count();
+    let warnings = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Warning)
+        .count();
+    let info = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Info)
+        .count();
 
     let output = Output {
         skills_checked,
@@ -63,8 +72,14 @@ pub fn diagnostics_json(diagnostics: &[Diagnostic], skills_checked: usize) -> St
 }
 
 pub fn format_summary(diagnostics: &[Diagnostic], skills_count: usize) -> String {
-    let errors = diagnostics.iter().filter(|d| d.severity == Severity::Error).count();
-    let warnings = diagnostics.iter().filter(|d| d.severity == Severity::Warning).count();
+    let errors = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .count();
+    let warnings = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Warning)
+        .count();
     format!(
         "\n{} skills checked. {} error(s), {} warning(s).",
         skills_count, errors, warnings
@@ -87,7 +102,13 @@ mod tests {
         }
     }
 
-    fn make_diag_with_line(severity: Severity, code: &str, msg: &str, path: &str, line: u32) -> Diagnostic {
+    fn make_diag_with_line(
+        severity: Severity,
+        code: &str,
+        msg: &str,
+        path: &str,
+        line: u32,
+    ) -> Diagnostic {
         Diagnostic {
             severity,
             code: code.to_string(),

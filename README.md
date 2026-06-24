@@ -1,117 +1,101 @@
 # loopkit
 
-Static analysis for agent skill contracts. Validates that your skills follow the [agentskills.io](https://agentskills.io) specification and are production-ready for multi-agent collaboration.
+**The Loop Language compiler.** loopkit verifies that your agent skills follow the Loop Language — a formal contract language for agent behavior. Skills written in plain markdown don't give agents clear instructions. Skills written in the Loop Language define what the agent should do, how it proves progress, when it stops, and who it hands off to — all machine-verifiable before anything hits production.
 
 ```bash
 cargo install loopkit
-loopkit /path/to/your-project --verbose
+loopkit /path/to/project --verbose
 ```
-
-[![Rust](https://img.shields.io/badge/rust-1.82+-orange)](https://rust-lang.org)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ---
 
-## What it checks
+## Why a contract language?
 
-Loopkit runs 20 validators across two categories:
+Prompt files and unstructured skill documents fail in predictable ways: agents skip steps, forget handoffs, loop forever, use inconsistent terminology, or make architectural decisions they shouldn't. Loop Language skills are structured: every skill declares its **state machine** (the set of states it moves through), its **transition rules** (when and why it changes state), its **halt conditions** (when to stop and escalate), and its **handoff targets** (who owns the next step). These aren't suggestions. They're contracts. loopkit enforces them.
 
-### Graph Validators (12)
-| Validator | What it checks |
+A skill without a state machine is documentation. A skill with a verifiable Loop Language contract is **executable process**.
+
+---
+
+## What loopkit verifies
+
+loopkit runs 20 validators organized under two engines:
+
+### The Graph Engine — state machine integrity
+
+| Validator | Contract ensures... |
 |---|---|
-| `graph` | State machine integrity — dead ends, unreachable states, self-loops |
-| `simulation` | Budget-constrained reachability from entry to terminal states |
-| `loop_language` | Standard verbs, halt reasons, transition syntax |
-| `loop_sections` | Required LOOP.md sections in correct order |
-| `state_consistency` | Bidirectional match between declared and graph states |
-| `enforced_states` | Every `.loopkit.yaml` enforced state appears in transitions |
-| `deskcheck` | Desk check transition pattern (opt-in, configurable) |
-| `bug_feedback` | Bug feedback loops from QA/acceptance back to dev (opt-in, configurable) |
-| `loop_completeness` | Level-appropriate LOOP.md + SKILL.md completeness |
-| `loop_state_files` | Referenced loop state files exist |
-| `cross_references` | Handoff targets and README skill references resolve |
-| `constraints` | Skill-to-skill handoff constraints |
+| `graph` | No dead-end states, no unreachable nodes, no self-loop-only traps |
+| `simulation` | Every entry state can reach a terminal within budget |
+| `loop_language` | All verbs and halt reasons are declared vocabulary |
+| `loop_sections` | LOOP.md has all required sections in canonical order |
+| `state_consistency` | Every state in prose is in the graph, every graph node is declared |
+| `enforced_states` | Every configured mandatory state appears somewhere |
+| `deskcheck` | Desk check states have proper entry/feedback/forward edges |
+| `bug_feedback` | QA and acceptance states feed bugs back to development |
+| `loop_completeness` | Skill level (L1/L2/L3) has matching section requirements |
+| `loop_state_files` | External state files referenced by the contract exist |
+| `cross_references` | Every `handoff <skill>` points to a real skill |
+| `constraints` | Handoff targets follow configured routing rules |
 
-### Best Practices (8)
-| Validator | What it checks |
+### The Style Engine — best practices
+
+| Validator | Checks |
 |---|---|
-| `naming` | Gerund naming, consistent patterns, no vague names |
+| `naming` | Gerund names, consistent patterns across skills |
 | `frontmatter` | Description exists, name is kebab-case, no reserved words |
-| `structure` | Line count limits, time-sensitive language, Windows paths |
-| `terminology` | Consistent term usage across skills |
-| `anti_patterns` | Magic numbers, too-many-options, undocumented magic |
-| `progressive` | Long skills should reference supplementary files |
-| `workflow` | Checklist sections in workflow skills |
-| `scripts` | Bundled scripts awareness, inline deps, no help scripts |
+| `structure` | Size limits, time-sensitive language, platform paths |
+| `terminology` | Terms used consistently across all skill files |
+| `anti_patterns` | Undocumented magic numbers, option-bombing |
+| `progressive` | Long skills reference supplementary files |
+| `workflow` | Workflow skills include checklist sections |
+| `scripts` | Bundled scripts have dependency declarations |
 
 ---
 
 ## Quick Start
 
-### Install
-
 ```bash
-# From source
+# Install
 cargo install loopkit
 
-# Or clone and build
-git clone https://github.com/loopworx/loopkit
-cd loopkit
-cargo build --release
-./target/release/loopkit --help
-```
-
-### Run
-
-```bash
-# Basic check
+# Check a project
 loopkit /path/to/project
 
-# Verbose mode — see per-validator diagnostic counts
+# Verbose — see per-validator counts
 loopkit /path/to/project --verbose
 
-# JSON output for CI
+# JSON — for CI machines
 loopkit /path/to/project --json
 ```
 
 Output:
 ```
-/Users/me/project/skills/running-tdd-loops/SKILL.md    Error    state-missing-checkpoint    Missing progress checkpoint
-/Users/me/project/skills/writing-stories/SKILL.md       Warning  name-non-gerund            Skill name not a gerund
+skills/running-tdd-loops/SKILL.md    Error    name-non-gerund      Skill name not a gerund (-ing form)
+skills/writing-stories/LOOP.md       Warning  loop-nonstandard-verb "flurbish" is not a standard verb
 
 21 skills checked. 1 error(s), 2 warning(s).
 ```
 
 ---
 
-## Project Layout
-
-loopkit expects the agentskills.io flat layout:
+## What a Loop Language skill looks like
 
 ```
 my-project/
-├── .loopkit.yaml          # loopkit config (required for enforced states etc.)
-├── README.md              # project readme (checked for skill references)
+├── .loopkit.yaml          # vocabulary, enforced states, validator config
 └── skills/
-    ├── running-tdd-loops/
-    │   ├── SKILL.md        # skill metadata + body
-    │   └── LOOP.md         # loop contract (state machine, transitions)
-    ├── writing-stories/
-    │   ├── SKILL.md
-    │   └── LOOP.md
-    └── ...
+    └── running-tdd-loops/
+        ├── SKILL.md       # metadata + body
+        └── LOOP.md        # the contract
 ```
 
-Each skill directory must contain at least `SKILL.md`. `LOOP.md` is optional but required for stateful skills.
+### SKILL.md — identity
 
-### SKILL.md
-
-Frontmatter (YAML) + body content:
-
-```markdown
+```yaml
 ---
 name: running-tdd-loops
-description: Execute TDD inner loops (FE component + BE CDC contract)
+description: Execute TDD inner loops (FE component + BE CDC contract tests)
 metadata:
   category: development
 ---
@@ -121,11 +105,12 @@ metadata:
 
 ## Rules
 ...
+
+## State Model
+This skill operates across `in-dev`, `in-deskcheck`, and `halted-stall`.
 ```
 
-### LOOP.md
-
-The loop contract defines the skill's state machine:
+### LOOP.md — the contract
 
 ```markdown
 ## Entry Conditions
@@ -135,15 +120,16 @@ Story is in-dev with clear ACs
 | field | type | description |
 |-------|------|-------------|
 | story | str  | Story identifier |
+| pass  | bool | Current test status |
 
 ## Single Iteration Step
-1. Write failing test
-2. Implement code
-3. Confirm green
-4. Refactor
+1. write failing test
+2. implement minimum code
+3. confirm green
+4. refactor
 
 ## Proof of Progress
-`cargo test` all green
+`cargo test` output shows all green
 
 ## State Transition Rule
 transition in-dev → in-deskcheck
@@ -160,22 +146,20 @@ halt stall after 10 iterations
 handoff running-desk-checks to qa-agent
 ```
 
+Every section is machine-parsed. The transition rules are extracted into a graph. The handoff target is cross-referenced. The halt condition is validated against declared vocabulary. Nothing is free-form prose — it's all contract.
+
 ---
 
-## Configuration — `.loopkit.yaml`
+## `.loopkit.yaml` reference
 
-All project-specific configuration lives in `.loopkit.yaml` at the project root. loopkit is fully agnostic — no state names are hardcoded in the binary.
-
-### Full reference
+loopkit is fully config-driven. Zero state names are hardcoded. You define the vocabulary for your project.
 
 ```yaml
-# Where skills live (default: skills/)
+# Where skills live
 skills_dir: skills/
-
-# Max iterations for budget-constrained simulation (default: 20)
 max_iterations: 20
 
-# Standard verbs recognized in LOOP.md steps
+# Declared vocabulary — loopkit flags anything outside this set
 standard_verbs:
   - trigger
   - handoff
@@ -187,9 +171,7 @@ standard_verbs:
   - resume
   - notify
   - complete
-  # ... add project-specific verbs
 
-# Standard halt reasons
 halt_reasons:
   - stall
   - ambiguous
@@ -197,7 +179,7 @@ halt_reasons:
   - unsafe
   - budget
 
-# Required LOOP.md sections (in order)
+# Required LOOP.md sections (checked for presence and order)
 canonical_loop_sections:
   - Entry Conditions
   - Loop State Schema
@@ -213,14 +195,13 @@ canonical_skill_sections:
   - Rules
   - State Model
 
-# Alternative heading names for the State Model section
+# Alternate headings for the state model section
 state_model_aliases:
   - State Model
   - The Loop
   - Loop States
-  - States
 
-# Enforced states — every state here must appear in at least one transition
+# States that MUST appear in at least one transition
 enforced_states:
   - name: in-dev
     agent: developer-agent
@@ -249,43 +230,25 @@ bug_feedback_acceptance_state: in-acceptance
 bug_feedback_return_to: in-dev
 ```
 
-### Why no defaults for enforced states?
-
-loopkit is **fully agnostic**. It ships with zero hardcoded state names. Every state, transition, and validation pattern is driven by your `.loopkit.yaml`. This means:
-
-- Use whatever state taxonomy fits your team — `in-progress` vs `in-dev`, `review` vs `deskcheck`, any terminal state name
-- Desk check and bug feedback validators are **opt-in** — enable them when your process needs them, configure them with your state names
-- Cross-reference exceptions (states that shouldn't trigger "unknown skill" warnings) are derived from your `enforced_states` and `halt_reasons`
-
 ---
 
-## CI Integration
+## Concepts
 
-```yaml
-# .github/workflows/loopkit.yml
-name: loopkit
-on: [push, pull_request]
-jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo install loopkit
-      - run: loopkit . --json > loopkit-report.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: loopkit-report
-          path: loopkit-report.json
-```
+### The Loop Language
 
----
+The Loop Language is a set of conventions that turn agent skill documents into **verifiable contracts**:
 
-## Verified Projects
+1. **State machines** — every skill operates across a finite set of named states
+2. **Transition rules** — state changes have triggers, handoffs, and halt conditions
+3. **Declared vocabulary** — verbs, halt reasons, and state names are all explicit
+4. **Proof of progress** — every iteration declares what "done for this round" means
+5. **Handoff integrity** — every transition knows who owns the next step
 
-| Project | Skills | Result |
-|---|---|---|
-| [Forge](https://github.com/yaman/forge) | 21 | 0 errors, 0 warnings |
+Skills that follow the Loop Language can be **statically verified** before an agent ever runs them. loopkit is the verifier.
+
+### Why not just a linter?
+
+Linters check style. loopkit checks **behavior**. A missing handoff target isn't a formatting issue — it means your agent will dead-end in a state with no path out. An undeclared state in prose means your graph has nodes the agent can reach but never describe. An unenforced state means you claimed it exists but nothing transitions to or from it. These are logical errors that break multi-agent coordination.
 
 ---
 
@@ -294,32 +257,17 @@ jobs:
 ```bash
 git clone https://github.com/loopworx/loopkit
 cd loopkit
-
-# Build
 cargo build
-
-# Run tests
 cargo test
-
-# Run against test fixture
 cargo run -p loopkit -- examples/test-fixture --verbose
 ```
-
-### Architecture
 
 ```
 crates/
 ├── loopkit-core/       # Config, discovery, parser, diagnostics
-├── loopkit-graph/      # Graph construction, validators, simulation
-└── loopkit/            # CLI, best-practice validators, acceptance tests
+├── loopkit-graph/      # Graph engine, validators, simulation
+└── loopkit/            # CLI, style engine, acceptance tests
 ```
-
-### Adding a validator
-
-1. Create `crates/loopkit-graph/src/validators/my_validator.rs` with a `validate()` function
-2. Register it in `crates/loopkit-graph/src/validators/mod.rs`
-3. Add tests
-4. If config-driven, add fields to `Config` in `crates/loopkit-core/src/types.rs`
 
 ---
 

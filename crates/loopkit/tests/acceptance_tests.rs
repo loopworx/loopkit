@@ -3,7 +3,11 @@ use std::path::PathBuf;
 /// Helper: get the fixture root (examples/test-fixture) relative to the workspace.
 fn fixture_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir.join("..").join("..").join("examples").join("test-fixture")
+    manifest_dir
+        .join("..")
+        .join("..")
+        .join("examples")
+        .join("test-fixture")
 }
 
 /// Helper: run the full pipeline against the fixture.
@@ -14,7 +18,9 @@ fn run_fixture() -> (Vec<loopkit_core::types::Diagnostic>, usize) {
     let (skills, discovery_diags) = loopkit_core::discovery::discover_skills(&skills_dir);
 
     let mut all_diags = discovery_diags;
-    all_diags.extend(loopkit_graph::validators::run_all(&root, &config, &skills, false));
+    all_diags.extend(loopkit_graph::validators::run_all(
+        &root, &config, &skills, false,
+    ));
     all_diags.extend(loopkit::best_practices::check_all(&skills, false));
 
     (all_diags, skills.len())
@@ -132,7 +138,9 @@ fn fixture_catches_missing_checklist() {
 fn fixture_catches_missing_feedback_loop() {
     let (diags, _) = run_fixture();
     assert!(
-        diags.iter().any(|d| d.code == "skill-missing-feedback-loop"),
+        diags
+            .iter()
+            .any(|d| d.code == "skill-missing-feedback-loop"),
         "should flag missing feedback loop pattern"
     );
 }
@@ -159,7 +167,9 @@ fn fixture_catches_unknown_halt_reason() {
 fn fixture_catches_unknown_handoff_target() {
     let (diags, _) = run_fixture();
     assert!(
-        diags.iter().any(|d| d.code == "constraints-unknown-handoff-target"),
+        diags
+            .iter()
+            .any(|d| d.code == "constraints-unknown-handoff-target"),
         "should flag handoff to non-existent skill"
     );
 }
@@ -205,12 +215,22 @@ fn valid_skill_has_no_frontmatter_errors() {
     let (diags, _) = run_fixture();
     let running_diags: Vec<_> = diags
         .iter()
-        .filter(|d| d.location.path.to_string_lossy().contains("running-tdd-loops"))
+        .filter(|d| {
+            d.location
+                .path
+                .to_string_lossy()
+                .contains("running-tdd-loops")
+        })
         .filter(|d| d.severity == loopkit_core::types::Severity::Error)
         .collect();
     let frontmatter_codes: Vec<_> = running_diags
         .iter()
-        .filter(|d| d.code.starts_with("skill-name-") || d.code.starts_with("skill-missing-name") || d.code.starts_with("skill-description-") || d.code.starts_with("skill-missing-description"))
+        .filter(|d| {
+            d.code.starts_with("skill-name-")
+                || d.code.starts_with("skill-missing-name")
+                || d.code.starts_with("skill-description-")
+                || d.code.starts_with("skill-missing-description")
+        })
         .map(|d| d.code.as_str())
         .collect();
     assert!(
@@ -225,7 +245,12 @@ fn valid_skill_has_no_loop_section_errors() {
     let (diags, _) = run_fixture();
     let running_diags: Vec<_> = diags
         .iter()
-        .filter(|d| d.location.path.to_string_lossy().contains("running-tdd-loops"))
+        .filter(|d| {
+            d.location
+                .path
+                .to_string_lossy()
+                .contains("running-tdd-loops")
+        })
         .filter(|d| d.severity == loopkit_core::types::Severity::Error)
         .filter(|d| d.code.starts_with("loop-"))
         .collect();
@@ -241,7 +266,12 @@ fn valid_skill_has_no_structure_errors() {
     let (diags, _) = run_fixture();
     let running_diags: Vec<_> = diags
         .iter()
-        .filter(|d| d.location.path.to_string_lossy().contains("running-tdd-loops"))
+        .filter(|d| {
+            d.location
+                .path
+                .to_string_lossy()
+                .contains("running-tdd-loops")
+        })
         .filter(|d| d.severity == loopkit_core::types::Severity::Error)
         .filter(|d| d.code.starts_with("skill-"))
         .collect();
@@ -256,7 +286,8 @@ fn valid_skill_has_no_structure_errors() {
 fn json_output_format_is_valid() {
     let (diags, skills_count) = run_fixture();
     let json = loopkit_core::diagnostic::diagnostics_json(&diags, skills_count);
-    let parsed: serde_json::Value = serde_json::from_str(&json).expect("JSON output should be valid");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&json).expect("JSON output should be valid");
     assert_eq!(parsed["skills_checked"], skills_count as u64);
     assert!(parsed["diagnostics"].is_array());
     assert!(parsed["summary"]["errors"].is_u64());
@@ -281,7 +312,11 @@ fn text_output_contains_all_diagnostics() {
     let summary = loopkit_core::diagnostic::format_summary(&diags, skills_count);
 
     for d in &diags {
-        assert!(text.contains(&d.code), "text output should contain code {}", d.code);
+        assert!(
+            text.contains(&d.code),
+            "text output should contain code {}",
+            d.code
+        );
     }
     assert!(summary.contains(&format!("{} skills checked", skills_count)));
     assert!(summary.contains("error(s)"));

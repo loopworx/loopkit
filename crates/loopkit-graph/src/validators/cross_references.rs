@@ -83,11 +83,22 @@ pub fn validate(skills: &[Skill], _all_skills: &[Skill], config: &Config) -> Vec
 /// Tokens that look like skill names but are known exceptions.
 fn is_known_exception(token: &str, config: &Config) -> bool {
     // Generic non-skill tokens
-    if matches!(token,
-        "story-id" | "capability-slug" | "story-123" | "story-bs01"
-            | "ADR-XXX" | "PROJ-28"
-            | "npm" | "cargo" | "dune" | "coqc"
-            | "test" | "Linear" | "all-agents" | "in-progress"
+    if matches!(
+        token,
+        "story-id"
+            | "capability-slug"
+            | "story-123"
+            | "story-bs01"
+            | "ADR-XXX"
+            | "PROJ-28"
+            | "npm"
+            | "cargo"
+            | "dune"
+            | "coqc"
+            | "test"
+            | "Linear"
+            | "all-agents"
+            | "in-progress"
     ) {
         return true;
     }
@@ -96,7 +107,11 @@ fn is_known_exception(token: &str, config: &Config) -> bool {
         return true;
     }
     // Config-driven: halted-* states derived from halt_reasons
-    if config.halt_reasons.iter().any(|r| format!("halted-{}", r) == token) {
+    if config
+        .halt_reasons
+        .iter()
+        .any(|r| format!("halted-{}", r) == token)
+    {
         return true;
     }
     token.ends_with("-agent") || token.starts_with("story-")
@@ -126,14 +141,43 @@ mod tests {
     fn test_config() -> Config {
         let mut config = Config::default();
         config.enforced_states = vec![
-            loopkit_core::types::EnforcedState { name: "in-analysis".into(), agent: "".into(), description: "".into() },
-            loopkit_core::types::EnforcedState { name: "in-dev".into(), agent: "".into(), description: "".into() },
-            loopkit_core::types::EnforcedState { name: "in-deskcheck".into(), agent: "".into(), description: "".into() },
-            loopkit_core::types::EnforcedState { name: "in-qa".into(), agent: "".into(), description: "".into() },
-            loopkit_core::types::EnforcedState { name: "in-acceptance".into(), agent: "".into(), description: "".into() },
-            loopkit_core::types::EnforcedState { name: "done".into(), agent: "".into(), description: "".into() },
+            loopkit_core::types::EnforcedState {
+                name: "in-analysis".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            loopkit_core::types::EnforcedState {
+                name: "in-dev".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            loopkit_core::types::EnforcedState {
+                name: "in-deskcheck".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            loopkit_core::types::EnforcedState {
+                name: "in-qa".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            loopkit_core::types::EnforcedState {
+                name: "in-acceptance".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            loopkit_core::types::EnforcedState {
+                name: "done".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
         ];
-        config.halt_reasons = vec!["stall".into(), "ambiguous".into(), "human-gate".into(), "unsafe".into()];
+        config.halt_reasons = vec![
+            "stall".into(),
+            "ambiguous".into(),
+            "human-gate".into(),
+            "unsafe".into(),
+        ];
         config
     }
 

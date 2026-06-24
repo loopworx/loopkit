@@ -40,17 +40,19 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         for entry in entries.flatten() {
             let file_name = entry.file_name().to_string_lossy().to_string();
             let lower = file_name.to_lowercase();
-            if lower.ends_with(".md") && lower != "skill.md" && lower != "loop.md" {
-                if !linked_refs.contains(&lower) {
-                    diags.push(Diagnostic::warning(
-                        "skill-orphan-reference",
-                        format!(
-                            "File '{}' exists in skill directory but is not linked from SKILL.md",
-                            file_name
-                        ),
-                        entry.path(),
-                    ));
-                }
+            if lower.ends_with(".md")
+                && lower != "skill.md"
+                && lower != "loop.md"
+                && !linked_refs.contains(&lower)
+            {
+                diags.push(Diagnostic::warning(
+                    "skill-orphan-reference",
+                    format!(
+                        "File '{}' exists in skill directory but is not linked from SKILL.md",
+                        file_name
+                    ),
+                    entry.path(),
+                ));
             }
         }
     }
@@ -61,8 +63,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
+
     use tempfile::tempdir;
 
     fn make_skill(name: &str, path: std::path::PathBuf, skill_md: std::path::PathBuf) -> Skill {
@@ -88,7 +89,9 @@ mod tests {
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
-        assert!(diags.iter().any(|d| d.code == "skill-no-progressive-disclosure"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-no-progressive-disclosure"));
     }
 
     #[test]
@@ -122,7 +125,9 @@ mod tests {
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
-        assert!(!diags.iter().any(|d| d.code == "skill-no-progressive-disclosure"));
+        assert!(!diags
+            .iter()
+            .any(|d| d.code == "skill-no-progressive-disclosure"));
     }
 
     #[test]

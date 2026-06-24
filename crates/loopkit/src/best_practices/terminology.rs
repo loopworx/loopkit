@@ -65,8 +65,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
+
     use tempfile::tempdir;
 
     fn make_skill(name: &str, path: std::path::PathBuf, skill_md: std::path::PathBuf) -> Skill {

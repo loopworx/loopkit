@@ -26,7 +26,7 @@ fn check_skill_completeness(skills: &[Skill], config: &Config) -> Vec<Diagnostic
         let section_names: Vec<&str> = skill.sections.iter().map(|s| s.name.as_str()).collect();
 
         // Check for Description
-        if !section_names.iter().any(|s| *s == "Description") {
+        if !section_names.contains(&"Description") {
             diags.push(Diagnostic {
                 severity: Severity::Error,
                 code: "skill-missing-description".to_string(),
@@ -37,7 +37,7 @@ fn check_skill_completeness(skills: &[Skill], config: &Config) -> Vec<Diagnostic
         }
 
         // Check for Rules
-        if !section_names.iter().any(|s| *s == "Rules") {
+        if !section_names.contains(&"Rules") {
             diags.push(Diagnostic {
                 severity: Severity::Error,
                 code: "skill-missing-rules".to_string(),
@@ -62,13 +62,16 @@ fn check_skill_completeness(skills: &[Skill], config: &Config) -> Vec<Diagnostic
                     skill.name, aliases
                 ),
                 location: FileLocation::new(skill.skill_md.clone()),
-                help: format!("Every SKILL.md must define a state model under one of: {}.", aliases),
+                help: format!(
+                    "Every SKILL.md must define a state model under one of: {}.",
+                    aliases
+                ),
             });
         }
 
         // L1-RIGID: requires Entry Conditions and Halt Conditions
         if skill.level == "L1-RIGID" {
-            if !section_names.iter().any(|s| *s == "Entry Conditions") {
+            if !section_names.contains(&"Entry Conditions") {
                 diags.push(Diagnostic {
                     severity: Severity::Error,
                     code: "skill-l1-missing-entry-conditions".to_string(),
@@ -81,7 +84,7 @@ fn check_skill_completeness(skills: &[Skill], config: &Config) -> Vec<Diagnostic
                         .to_string(),
                 });
             }
-            if !section_names.iter().any(|s| *s == "Halt Conditions") {
+            if !section_names.contains(&"Halt Conditions") {
                 diags.push(Diagnostic {
                     severity: Severity::Error,
                     code: "skill-l1-missing-halt-conditions".to_string(),
@@ -137,9 +140,10 @@ fn check_loop_completeness(
                     skill.name
                 ),
                 location: FileLocation::new(skill.path.clone()),
-                help: "Skills with transition rules should have a LOOP.md defining entry conditions, \
+                help:
+                    "Skills with transition rules should have a LOOP.md defining entry conditions, \
                     proof of progress, and halt conditions."
-                    .to_string(),
+                        .to_string(),
             });
         }
     }
@@ -182,7 +186,10 @@ mod tests {
     #[test]
     fn missing_rules_emits_error() {
         let dir = TempDir::new().unwrap();
-        let sections = vec![Section { name: "Description".into(), body: "desc".into() }];
+        let sections = vec![Section {
+            name: "Description".into(),
+            body: "desc".into(),
+        }];
         let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
         let config = Config::default();
         let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
@@ -194,8 +201,14 @@ mod tests {
     fn missing_state_model_emits_error() {
         let dir = TempDir::new().unwrap();
         let sections = vec![
-            Section { name: "Description".into(), body: "d".into() },
-            Section { name: "Rules".into(), body: "r".into() },
+            Section {
+                name: "Description".into(),
+                body: "d".into(),
+            },
+            Section {
+                name: "Rules".into(),
+                body: "r".into(),
+            },
         ];
         let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
         let config = Config::default();
@@ -208,42 +221,82 @@ mod tests {
     fn l1_rigid_missing_entry_conditions_emits_error() {
         let dir = TempDir::new().unwrap();
         let sections = vec![
-            Section { name: "Description".into(), body: "d".into() },
-            Section { name: "Rules".into(), body: "r".into() },
-            Section { name: "State Model".into(), body: "s".into() },
-            Section { name: "Halt Conditions".into(), body: "h".into() },
+            Section {
+                name: "Description".into(),
+                body: "d".into(),
+            },
+            Section {
+                name: "Rules".into(),
+                body: "r".into(),
+            },
+            Section {
+                name: "State Model".into(),
+                body: "s".into(),
+            },
+            Section {
+                name: "Halt Conditions".into(),
+                body: "h".into(),
+            },
         ];
         let skill = make_skill("test", "L1-RIGID", sections, dir.path().to_path_buf());
         let config = Config::default();
         let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
         let diags = validate(&[skill], &all_handoffs, &config);
-        assert!(diags.iter().any(|d| d.code == "skill-l1-missing-entry-conditions"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-l1-missing-entry-conditions"));
     }
 
     #[test]
     fn l1_rigid_missing_halt_conditions_emits_error() {
         let dir = TempDir::new().unwrap();
         let sections = vec![
-            Section { name: "Description".into(), body: "d".into() },
-            Section { name: "Rules".into(), body: "r".into() },
-            Section { name: "State Model".into(), body: "s".into() },
-            Section { name: "Entry Conditions".into(), body: "e".into() },
+            Section {
+                name: "Description".into(),
+                body: "d".into(),
+            },
+            Section {
+                name: "Rules".into(),
+                body: "r".into(),
+            },
+            Section {
+                name: "State Model".into(),
+                body: "s".into(),
+            },
+            Section {
+                name: "Entry Conditions".into(),
+                body: "e".into(),
+            },
         ];
         let skill = make_skill("test", "L1-RIGID", sections, dir.path().to_path_buf());
         let config = Config::default();
         let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
         let diags = validate(&[skill], &all_handoffs, &config);
-        assert!(diags.iter().any(|d| d.code == "skill-l1-missing-halt-conditions"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-l1-missing-halt-conditions"));
     }
 
     #[test]
     fn duplicate_rules_emits_error() {
         let dir = TempDir::new().unwrap();
         let sections = vec![
-            Section { name: "Description".into(), body: "d".into() },
-            Section { name: "Rules".into(), body: "r1".into() },
-            Section { name: "Rules".into(), body: "r2".into() },
-            Section { name: "State Model".into(), body: "s".into() },
+            Section {
+                name: "Description".into(),
+                body: "d".into(),
+            },
+            Section {
+                name: "Rules".into(),
+                body: "r1".into(),
+            },
+            Section {
+                name: "Rules".into(),
+                body: "r2".into(),
+            },
+            Section {
+                name: "State Model".into(),
+                body: "s".into(),
+            },
         ];
         let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
         let config = Config::default();
@@ -256,9 +309,18 @@ mod tests {
     fn skill_with_transitions_but_no_loop_md_emits_error() {
         let dir = TempDir::new().unwrap();
         let sections = vec![
-            Section { name: "Description".into(), body: "d".into() },
-            Section { name: "Rules".into(), body: "r".into() },
-            Section { name: "State Model".into(), body: "s".into() },
+            Section {
+                name: "Description".into(),
+                body: "d".into(),
+            },
+            Section {
+                name: "Rules".into(),
+                body: "r".into(),
+            },
+            Section {
+                name: "State Model".into(),
+                body: "s".into(),
+            },
         ];
         let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
         let mut all_handoffs: HashMap<String, LoopContract> = HashMap::new();
@@ -269,25 +331,41 @@ mod tests {
                 sections: vec![],
                 section_order_valid: true,
                 transitions: vec![crate::types::TransitionRule {
-                    from: "a".into(), to: "b".into(),
-                    trigger: None, handoff_target: None, handoff_agent: None,
-                    halt_reason: None, halt_after: None, defined_in: "test".into(),
+                    from: "a".into(),
+                    to: "b".into(),
+                    trigger: None,
+                    handoff_target: None,
+                    handoff_agent: None,
+                    halt_reason: None,
+                    halt_after: None,
+                    defined_in: "test".into(),
                 }],
                 loop_md_path: PathBuf::from("nonexistent/LOOP.md"),
             },
         );
         let config = Config::default();
         let diags = validate(&[skill], &all_handoffs, &config);
-        assert!(diags.iter().any(|d| d.code == "loop-missing-for-transition-skill"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "loop-missing-for-transition-skill"));
     }
 
     #[test]
     fn valid_skill_no_errors() {
         let dir = TempDir::new().unwrap();
         let sections = vec![
-            Section { name: "Description".into(), body: "d".into() },
-            Section { name: "Rules".into(), body: "r".into() },
-            Section { name: "State Model".into(), body: "s".into() },
+            Section {
+                name: "Description".into(),
+                body: "d".into(),
+            },
+            Section {
+                name: "Rules".into(),
+                body: "r".into(),
+            },
+            Section {
+                name: "State Model".into(),
+                body: "s".into(),
+            },
         ];
         let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
         let config = Config::default();

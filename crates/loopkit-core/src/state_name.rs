@@ -17,7 +17,10 @@ pub fn validate_state_name(s: &str, enforced: &[EnforcedState]) -> Result<(), St
     if s.len() > 128 {
         return Err(format!("state name too long ({} chars, max 128)", s.len()));
     }
-    if !s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+    if !s
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    {
         return Err("state name must contain only lowercase letters, digits, and hyphens".into());
     }
     // Allow enforced states without hyphen (e.g. "done", "backlog")
@@ -61,7 +64,8 @@ pub fn is_state_like(s: &str, enforced: &[EnforcedState]) -> bool {
         return false;
     }
     // Only allowed chars
-    s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    s.chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
 #[cfg(test)]
@@ -70,11 +74,31 @@ mod tests {
 
     fn enforced() -> Vec<EnforcedState> {
         vec![
-            EnforcedState { name: "done".into(), agent: "".into(), description: "".into() },
-            EnforcedState { name: "in-dev".into(), agent: "".into(), description: "".into() },
-            EnforcedState { name: "in-qa".into(), agent: "".into(), description: "".into() },
-            EnforcedState { name: "halted-stall".into(), agent: "".into(), description: "".into() },
-            EnforcedState { name: "in-deskcheck".into(), agent: "".into(), description: "".into() },
+            EnforcedState {
+                name: "done".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            EnforcedState {
+                name: "in-dev".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            EnforcedState {
+                name: "in-qa".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            EnforcedState {
+                name: "halted-stall".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
+            EnforcedState {
+                name: "in-deskcheck".into(),
+                agent: "".into(),
+                description: "".into(),
+            },
         ]
     }
 
@@ -122,10 +146,10 @@ mod tests {
         let e = enforced();
         assert!(is_state_like("in-dev", &e));
         assert!(is_state_like("done", &e));
-        assert!(!is_state_like("running-tdd-loops", &e));  // gerund
-        assert!(!is_state_like("skills/meta/skill", &e));   // path
+        assert!(!is_state_like("running-tdd-loops", &e)); // gerund
+        assert!(!is_state_like("skills/meta/skill", &e)); // path
         assert!(!is_state_like("https://example.com", &e)); // URL
-        assert!(!is_state_like("helper", &e));               // no hyphen
-        assert!(!is_state_like("", &e));                     // empty
+        assert!(!is_state_like("helper", &e)); // no hyphen
+        assert!(!is_state_like("", &e)); // empty
     }
 }

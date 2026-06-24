@@ -7,7 +7,10 @@ pub fn validate(root: &Path, config: &Config) -> Vec<Diagnostic> {
 
     let expected_files = [
         ("docs/inception.loop.md", "inception phase tracking"),
-        ("docs/iteration-board.loop.md", "iteration governance tracking"),
+        (
+            "docs/iteration-board.loop.md",
+            "iteration governance tracking",
+        ),
     ];
 
     for (path, desc) in &expected_files {
@@ -18,10 +21,7 @@ pub fn validate(root: &Path, config: &Config) -> Vec<Diagnostic> {
                 code: "loop-state-file-missing".to_string(),
                 message: format!("Loop state file `{}` ({}) is missing", path, desc),
                 location: FileLocation::new(full_path),
-                help: format!(
-                    "Create `{}` to track {} state across sessions.",
-                    path, desc
-                ),
+                help: format!("Create `{}` to track {} state across sessions.", path, desc),
             });
         }
     }
@@ -55,6 +55,10 @@ mod tests {
         std::fs::write(docs.join("iteration-board.loop.md"), "").unwrap();
         let config = Config::default();
         let diags = validate(dir.path(), &config);
-        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
+        assert!(
+            diags.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            diags
+        );
     }
 }

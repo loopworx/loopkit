@@ -18,38 +18,44 @@ pub fn discover_skills(skills_dir: &Path) -> (Vec<Skill>, Vec<Diagnostic>) {
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     // Pass 1: flat structure (depth 1) — the agentskills.io standard
-    for entry in WalkDir::new(skills_dir).min_depth(1).max_depth(1) {
-        if let Ok(entry) = entry {
-            if entry.file_type().is_dir() {
-                let name = entry.file_name().to_string_lossy().to_string();
-                match parse_skill_dir(entry.path()) {
-                    Ok(Some(skill)) => {
-                        seen.insert(name);
-                        skills.push(skill);
-                    }
-                    Ok(None) => {}
-                    Err(diags) => diagnostics.extend(diags),
+    for entry in WalkDir::new(skills_dir)
+        .min_depth(1)
+        .max_depth(1)
+        .into_iter()
+        .flatten()
+    {
+        if entry.file_type().is_dir() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            match parse_skill_dir(entry.path()) {
+                Ok(Some(skill)) => {
+                    seen.insert(name);
+                    skills.push(skill);
                 }
+                Ok(None) => {}
+                Err(diags) => diagnostics.extend(diags),
             }
         }
     }
 
     // Pass 2: nested structure (depth 2) — legacy forge convention, skip if flat already found
-    for entry in WalkDir::new(skills_dir).min_depth(2).max_depth(2) {
-        if let Ok(entry) = entry {
-            if entry.file_type().is_dir() {
-                let name = entry.file_name().to_string_lossy().to_string();
-                if seen.contains(&name) {
-                    continue; // already discovered via flat structure
+    for entry in WalkDir::new(skills_dir)
+        .min_depth(2)
+        .max_depth(2)
+        .into_iter()
+        .flatten()
+    {
+        if entry.file_type().is_dir() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if seen.contains(&name) {
+                continue; // already discovered via flat structure
+            }
+            match parse_skill_dir(entry.path()) {
+                Ok(Some(skill)) => {
+                    seen.insert(name);
+                    skills.push(skill);
                 }
-                match parse_skill_dir(entry.path()) {
-                    Ok(Some(skill)) => {
-                        seen.insert(name);
-                        skills.push(skill);
-                    }
-                    Ok(None) => {}
-                    Err(diags) => diagnostics.extend(diags),
-                }
+                Ok(None) => {}
+                Err(diags) => diagnostics.extend(diags),
             }
         }
     }
@@ -122,11 +128,7 @@ mod tests {
         let skill_dir = skills_dir.join("bad-skill");
         fs::create_dir_all(&skill_dir).unwrap();
         // Missing 'name' in frontmatter → parse error
-        write_skill_md(
-            &skill_dir,
-            "description: No name here",
-            "# Bad Skill",
-        );
+        write_skill_md(&skill_dir, "description: No name here", "# Bad Skill");
 
         let (skills, diags) = discover_skills(skills_dir);
         assert!(skills.is_empty());

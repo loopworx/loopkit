@@ -163,9 +163,10 @@ pub fn extract_section_body(content: &str, heading: &str) -> Option<String> {
                     body.push_str(&text);
                 }
             }
-            Event::Start(Tag::Heading { level, .. })
-                if matches!(level, HeadingLevel::H1 | HeadingLevel::H3) =>
-            {
+            Event::Start(Tag::Heading {
+                level: HeadingLevel::H1 | HeadingLevel::H3,
+                ..
+            }) => {
                 if in_target {
                     target_ended = true;
                     in_target = false;
@@ -286,7 +287,8 @@ mod tests {
 
     #[test]
     fn test_parse_sections_single_h2() {
-        let content = "# Title\n\n## Section One\n\nBody text here.\n\n## Section Two\n\nMore body.";
+        let content =
+            "# Title\n\n## Section One\n\nBody text here.\n\n## Section Two\n\nMore body.";
         let sections = parse_sections(content);
         assert_eq!(sections.len(), 2);
         assert_eq!(sections[0].name, "Section One");
@@ -327,11 +329,7 @@ mod tests {
     fn test_parse_skill_dir_missing_name() {
         let dir = tempfile::tempdir().unwrap();
         let skill_md = dir.path().join("SKILL.md");
-        std::fs::write(
-            &skill_md,
-            "---\ndescription: No name here\n---\n\n# Body",
-        )
-        .unwrap();
+        std::fs::write(&skill_md, "---\ndescription: No name here\n---\n\n# Body").unwrap();
         let result = parse_skill_dir(dir.path());
         assert!(result.is_err());
         let diags = result.unwrap_err();

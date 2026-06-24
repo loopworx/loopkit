@@ -1,5 +1,5 @@
 use crate::types::Transition;
-use loopkit_core::types::{Config, Diagnostic, Severity, FileLocation};
+use loopkit_core::types::{Config, Diagnostic, FileLocation, Severity};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -18,7 +18,11 @@ pub fn validate(transitions: &[Transition], config: &Config) -> Vec<Diagnostic> 
 
     if !config.bug_feedback_qa_state.is_empty()
         && adj.contains_key(config.bug_feedback_qa_state.as_str())
-        && !has_edge(&adj, config.bug_feedback_qa_state.as_str(), config.bug_feedback_return_to.as_str())
+        && !has_edge(
+            &adj,
+            config.bug_feedback_qa_state.as_str(),
+            config.bug_feedback_return_to.as_str(),
+        )
     {
         diagnostics.push(Diagnostic {
             severity: Severity::Error,
@@ -28,13 +32,20 @@ pub fn validate(transitions: &[Transition], config: &Config) -> Vec<Diagnostic> 
                 config.bug_feedback_qa_state, config.bug_feedback_return_to
             ),
             location: FileLocation::new(PathBuf::from("skills")),
-            help: format!("Add: transition {} → {}", config.bug_feedback_qa_state, config.bug_feedback_return_to),
+            help: format!(
+                "Add: transition {} → {}",
+                config.bug_feedback_qa_state, config.bug_feedback_return_to
+            ),
         });
     }
 
     if !config.bug_feedback_acceptance_state.is_empty()
         && adj.contains_key(config.bug_feedback_acceptance_state.as_str())
-        && !has_edge(&adj, config.bug_feedback_acceptance_state.as_str(), config.bug_feedback_return_to.as_str())
+        && !has_edge(
+            &adj,
+            config.bug_feedback_acceptance_state.as_str(),
+            config.bug_feedback_return_to.as_str(),
+        )
     {
         diagnostics.push(Diagnostic {
             severity: Severity::Error,
@@ -44,7 +55,10 @@ pub fn validate(transitions: &[Transition], config: &Config) -> Vec<Diagnostic> 
                 config.bug_feedback_acceptance_state, config.bug_feedback_return_to
             ),
             location: FileLocation::new(PathBuf::from("skills")),
-            help: format!("Add: transition {} → {}", config.bug_feedback_acceptance_state, config.bug_feedback_return_to),
+            help: format!(
+                "Add: transition {} → {}",
+                config.bug_feedback_acceptance_state, config.bug_feedback_return_to
+            ),
         });
     }
 
@@ -60,7 +74,9 @@ fn build_adjacency_map(transitions: &[Transition]) -> HashMap<&str, Vec<&str>> {
 }
 
 fn has_edge(adj: &HashMap<&str, Vec<&str>>, from: &str, to: &str) -> bool {
-    adj.get(from).map(|targets| targets.contains(&to)).unwrap_or(false)
+    adj.get(from)
+        .map(|targets| targets.contains(&to))
+        .unwrap_or(false)
 }
 
 #[cfg(test)]
@@ -68,7 +84,12 @@ mod tests {
     use super::*;
 
     fn t(from: &str, to: &str) -> Transition {
-        Transition { from: from.into(), to: to.into(), skill: "test".into(), defined_in: std::path::PathBuf::from("t/LOOP.md") }
+        Transition {
+            from: from.into(),
+            to: to.into(),
+            skill: "test".into(),
+            defined_in: std::path::PathBuf::from("t/LOOP.md"),
+        }
     }
 
     fn test_config() -> Config {

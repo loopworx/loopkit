@@ -5,8 +5,7 @@ use std::path::Path;
 pub fn parse_file<T: DeserializeOwned + 'static>(path: &Path) -> Result<T, String> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| format!("cannot read {}: {}", path.display(), e))?;
-    serde_yml::from_str(&content)
-        .map_err(|e| format!("cannot parse {}: {}", path.display(), e))
+    serde_yml::from_str(&content).map_err(|e| format!("cannot parse {}: {}", path.display(), e))
 }
 
 #[cfg(test)]

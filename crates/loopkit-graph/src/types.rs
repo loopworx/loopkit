@@ -1,17 +1,22 @@
 /// Standard verbs allowed in transition rules.
 pub const STANDARD_VERBS: &[&str] = &[
-    "trigger", "handoff", "halt", "call", "wait", "route", "escalate", "resume", "notify", "complete"
+    "trigger", "handoff", "halt", "call", "wait", "route", "escalate", "resume", "notify",
+    "complete",
 ];
 
 /// Standard halt reasons.
-pub const STANDARD_HALT_REASONS: &[&str] = &[
-    "stall", "ambiguous", "human-gate", "unsafe", "budget"
-];
+pub const STANDARD_HALT_REASONS: &[&str] =
+    &["stall", "ambiguous", "human-gate", "unsafe", "budget"];
 
 /// Canonical LOOP.md section names (in order).
 pub const CANONICAL_LOOP_SECTIONS: &[&str] = &[
-    "Entry Conditions", "Loop State Schema", "Single Iteration Step",
-    "Proof of Progress", "State Transition Rule", "Halt Conditions", "Handoff Target"
+    "Entry Conditions",
+    "Loop State Schema",
+    "Single Iteration Step",
+    "Proof of Progress",
+    "State Transition Rule",
+    "Halt Conditions",
+    "Handoff Target",
 ];
 
 /// A transition rule parsed from a LOOP.md file.
@@ -93,25 +98,70 @@ mod tests {
 
     #[test]
     fn loop_section_name() {
-        assert_eq!(LoopSection::EntryConditions("body".into()).name(), "Entry Conditions");
-        assert_eq!(LoopSection::LoopStateSchema("body".into()).name(), "Loop State Schema");
-        assert_eq!(LoopSection::SingleIterationStep("body".into()).name(), "Single Iteration Step");
-        assert_eq!(LoopSection::ProofOfProgress("body".into()).name(), "Proof of Progress");
-        assert_eq!(LoopSection::StateTransitionRule("body".into()).name(), "State Transition Rule");
-        assert_eq!(LoopSection::HaltConditions("body".into()).name(), "Halt Conditions");
-        assert_eq!(LoopSection::HandoffTarget("body".into()).name(), "Handoff Target");
-        assert_eq!(LoopSection::Unknown("Custom Section".into()).name(), "Custom Section");
+        assert_eq!(
+            LoopSection::EntryConditions("body".into()).name(),
+            "Entry Conditions"
+        );
+        assert_eq!(
+            LoopSection::LoopStateSchema("body".into()).name(),
+            "Loop State Schema"
+        );
+        assert_eq!(
+            LoopSection::SingleIterationStep("body".into()).name(),
+            "Single Iteration Step"
+        );
+        assert_eq!(
+            LoopSection::ProofOfProgress("body".into()).name(),
+            "Proof of Progress"
+        );
+        assert_eq!(
+            LoopSection::StateTransitionRule("body".into()).name(),
+            "State Transition Rule"
+        );
+        assert_eq!(
+            LoopSection::HaltConditions("body".into()).name(),
+            "Halt Conditions"
+        );
+        assert_eq!(
+            LoopSection::HandoffTarget("body".into()).name(),
+            "Handoff Target"
+        );
+        assert_eq!(
+            LoopSection::Unknown("Custom Section".into()).name(),
+            "Custom Section"
+        );
     }
 
     #[test]
     fn loop_section_body() {
-        assert_eq!(LoopSection::EntryConditions("the body".into()).body(), "the body");
-        assert_eq!(LoopSection::LoopStateSchema("schema body".into()).body(), "schema body");
-        assert_eq!(LoopSection::SingleIterationStep("step body".into()).body(), "step body");
-        assert_eq!(LoopSection::ProofOfProgress("proof body".into()).body(), "proof body");
-        assert_eq!(LoopSection::StateTransitionRule("rule body".into()).body(), "rule body");
-        assert_eq!(LoopSection::HaltConditions("halt body".into()).body(), "halt body");
-        assert_eq!(LoopSection::HandoffTarget("handoff body".into()).body(), "handoff body");
+        assert_eq!(
+            LoopSection::EntryConditions("the body".into()).body(),
+            "the body"
+        );
+        assert_eq!(
+            LoopSection::LoopStateSchema("schema body".into()).body(),
+            "schema body"
+        );
+        assert_eq!(
+            LoopSection::SingleIterationStep("step body".into()).body(),
+            "step body"
+        );
+        assert_eq!(
+            LoopSection::ProofOfProgress("proof body".into()).body(),
+            "proof body"
+        );
+        assert_eq!(
+            LoopSection::StateTransitionRule("rule body".into()).body(),
+            "rule body"
+        );
+        assert_eq!(
+            LoopSection::HaltConditions("halt body".into()).body(),
+            "halt body"
+        );
+        assert_eq!(
+            LoopSection::HandoffTarget("handoff body".into()).body(),
+            "handoff body"
+        );
         assert_eq!(LoopSection::Unknown("whatever".into()).body(), "");
     }
 

@@ -18,12 +18,14 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     }
 
     // Check for numbered steps or checklist items
-    let has_checklist = content.contains("- [ ]")
-        || content.contains("- [x]")
-        || content.contains("- [X]")
-        || {
+    let has_checklist =
+        content.contains("- [ ]") || content.contains("- [x]") || content.contains("- [X]") || {
             let numbered_re = Regex::new(r"^\d+\.").expect("hardcoded regex");
-            content.lines().filter(|l| numbered_re.is_match(l.trim())).count() >= 2
+            content
+                .lines()
+                .filter(|l| numbered_re.is_match(l.trim()))
+                .count()
+                >= 2
         };
 
     // Check for multi-step procedure without checklist
@@ -52,10 +54,11 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     };
 
     if !has_feedback_loop {
-        let has_test_like = content.to_lowercase().contains("test")
-            || content.to_lowercase().contains("validate");
+        let has_test_like =
+            content.to_lowercase().contains("test") || content.to_lowercase().contains("validate");
         if has_test_like && content.to_lowercase().contains("implement") {
-            let line = content.lines()
+            let line = content
+                .lines()
                 .enumerate()
                 .find(|(_, l)| {
                     let lower_l = l.to_lowercase();
@@ -85,7 +88,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         || content.contains("decide")
         || content.contains("determine");
     if has_choice && !has_conditional {
-        let line = content.lines()
+        let line = content
+            .lines()
             .enumerate()
             .find(|(_, l)| {
                 let lower_l = l.to_lowercase();
@@ -112,8 +116,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
+
     use tempfile::tempdir;
 
     fn make_skill(name: &str, path: std::path::PathBuf, skill_md: std::path::PathBuf) -> Skill {

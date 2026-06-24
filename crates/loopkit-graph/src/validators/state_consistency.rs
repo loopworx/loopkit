@@ -39,11 +39,16 @@ pub fn validate(skills: &[Skill], transitions: &[Transition], config: &Config) -
             for state in &prose_states {
                 if !graph_states.contains(state.as_str()) {
                     // Find the line in the State Model section where this state appears
-                    let state_line = content.lines().enumerate().find(|(_, line)| {
-                        let has_backtick = line.contains(&format!("`{}`", state));
-                        let has_no_backtick = line.contains(state.as_str()) && !line.contains('`');
-                        has_backtick || has_no_backtick
-                    }).map(|(i, _)| (i + 1) as u32);
+                    let state_line = content
+                        .lines()
+                        .enumerate()
+                        .find(|(_, line)| {
+                            let has_backtick = line.contains(&format!("`{}`", state));
+                            let has_no_backtick =
+                                line.contains(state.as_str()) && !line.contains('`');
+                            has_backtick || has_no_backtick
+                        })
+                        .map(|(i, _)| (i + 1) as u32);
 
                     let mut diag = Diagnostic {
                         severity: Severity::Warning,
@@ -109,7 +114,10 @@ pub fn validate(skills: &[Skill], transitions: &[Transition], config: &Config) -
 
 /// Extract state-like tokens from section body text.
 /// Looks for backtick-quoted words.
-fn extract_prose_states(section_body: &str, enforced: &[loopkit_core::types::EnforcedState]) -> Vec<String> {
+fn extract_prose_states(
+    section_body: &str,
+    enforced: &[loopkit_core::types::EnforcedState],
+) -> Vec<String> {
     if section_body.trim().is_empty() {
         return Vec::new();
     }
@@ -215,7 +223,11 @@ Current state is `in-dev`. Next is `in-qa`.
         config.state_model_aliases = vec!["State Model".to_string()];
 
         let diags = validate(&skills, &transitions, &config);
-        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
+        assert!(
+            diags.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            diags
+        );
     }
 
     #[test]
@@ -238,8 +250,9 @@ This skill handles `in-dev`.
         config.state_model_aliases = vec!["State Model".to_string()];
 
         let diags = validate(&skills, &transitions, &config);
-        assert!(diags.iter().any(|d| d.code == "state-undeclared-in-skill"
-            && d.message.contains("in-qa")));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "state-undeclared-in-skill" && d.message.contains("in-qa")));
     }
 
     #[test]
@@ -262,8 +275,9 @@ States: `in-dev`, `in-qa`, `orphan-state`.
         config.state_model_aliases = vec!["State Model".to_string()];
 
         let diags = validate(&skills, &transitions, &config);
-        assert!(diags.iter().any(|d| d.code == "state-undefined-in-graph"
-            && d.message.contains("orphan-state")));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "state-undefined-in-graph" && d.message.contains("orphan-state")));
     }
 
     #[test]

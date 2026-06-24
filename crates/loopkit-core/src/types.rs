@@ -169,33 +169,63 @@ pub struct Config {
     pub bug_feedback_return_to: String,
 }
 
-fn default_skills_dir() -> String { "skills/".to_string() }
-fn default_max_iterations() -> u32 { 20 }
+fn default_skills_dir() -> String {
+    "skills/".to_string()
+}
+fn default_max_iterations() -> u32 {
+    20
+}
 
 fn default_standard_verbs() -> Vec<String> {
-    vec!["trigger","handoff","halt","call","wait","route","escalate","resume","notify","complete"]
-        .into_iter().map(String::from).collect()
+    vec![
+        "trigger", "handoff", "halt", "call", "wait", "route", "escalate", "resume", "notify",
+        "complete",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
 }
 
 fn default_halt_reasons() -> Vec<String> {
-    vec!["stall","ambiguous","human-gate","unsafe","budget"]
-        .into_iter().map(String::from).collect()
+    vec!["stall", "ambiguous", "human-gate", "unsafe", "budget"]
+        .into_iter()
+        .map(String::from)
+        .collect()
 }
 
 fn default_canonical_loop_sections() -> Vec<String> {
-    vec!["Entry Conditions","Loop State Schema","Single Iteration Step",
-         "Proof of Progress","State Transition Rule","Halt Conditions","Handoff Target"]
-        .into_iter().map(String::from).collect()
+    vec![
+        "Entry Conditions",
+        "Loop State Schema",
+        "Single Iteration Step",
+        "Proof of Progress",
+        "State Transition Rule",
+        "Halt Conditions",
+        "Handoff Target",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
 }
 
 fn default_canonical_skill_sections() -> Vec<String> {
-    vec!["Description","Rules","State Model","Entry Conditions","Halt Conditions"]
-        .into_iter().map(String::from).collect()
+    vec![
+        "Description",
+        "Rules",
+        "State Model",
+        "Entry Conditions",
+        "Halt Conditions",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
 }
 
 fn default_state_model_aliases() -> Vec<String> {
-    vec!["State Model","The Loop","Loop States","States"]
-        .into_iter().map(String::from).collect()
+    vec!["State Model", "The Loop", "Loop States", "States"]
+        .into_iter()
+        .map(String::from)
+        .collect()
 }
 
 fn default_enforced_states() -> Vec<EnforcedState> {

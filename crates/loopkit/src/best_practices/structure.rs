@@ -25,11 +25,14 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     // Windows-style path detection
     if let Some(pos) = content.find('\\') {
         let line = content[..pos].lines().count() as u32 + 1;
-        diags.push(Diagnostic::error(
-            "skill-windows-path",
-            "SKILL.md contains Windows-style paths (backslash). Use forward slashes".into(),
-            path.clone(),
-        ).at_line(line));
+        diags.push(
+            Diagnostic::error(
+                "skill-windows-path",
+                "SKILL.md contains Windows-style paths (backslash). Use forward slashes".into(),
+                path.clone(),
+            )
+            .at_line(line),
+        );
     }
 
     // Time-sensitive language detection
@@ -71,7 +74,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
                     let has_toc = ref_content.contains("## Table of Contents")
                         || ref_content.contains("## Contents")
                         || ref_content.contains("- [")
-                        && ref_content.lines().filter(|l| l.starts_with("- [")).count() > 2;
+                            && ref_content.lines().filter(|l| l.starts_with("- [")).count() > 2;
                     if !has_toc {
                         diags.push(Diagnostic::warning(
                             "skill-ref-missing-toc",
@@ -93,8 +96,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
+
     use tempfile::tempdir;
 
     fn make_skill(name: &str, path: std::path::PathBuf, skill_md: std::path::PathBuf) -> Skill {
@@ -150,7 +152,11 @@ mod tests {
         let dir = tempdir().unwrap();
         let md_path = dir.path().join("SKILL.md");
         std::fs::write(&md_path, "See [ref](ref.md)").unwrap();
-        std::fs::write(dir.path().join("ref.md"), "Just some content, no references here.").unwrap();
+        std::fs::write(
+            dir.path().join("ref.md"),
+            "Just some content, no references here.",
+        )
+        .unwrap();
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
@@ -174,7 +180,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let md_path = dir.path().join("SKILL.md");
         std::fs::write(&md_path, "See [bigref](bigref.md)").unwrap();
-        let big_content = (0..101).map(|i| format!("line {}\n", i)).collect::<String>();
+        let big_content = (0..101)
+            .map(|i| format!("line {}\n", i))
+            .collect::<String>();
         std::fs::write(dir.path().join("bigref.md"), big_content).unwrap();
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);

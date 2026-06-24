@@ -27,7 +27,7 @@ pub fn build_transitions(
 }
 
 /// Build adjacency list from transitions.
-pub fn build_adjacency<'a>(transitions: &'a [Transition]) -> HashMap<&'a str, Vec<&'a str>> {
+pub fn build_adjacency(transitions: &[Transition]) -> HashMap<&str, Vec<&str>> {
     let mut adj: HashMap<&str, Vec<&str>> = HashMap::new();
     for t in transitions {
         adj.entry(&t.from).or_default().push(&t.to);
@@ -127,18 +127,16 @@ mod tests {
                 skill: "my-skill".into(),
                 sections: vec![],
                 section_order_valid: true,
-                transitions: vec![
-                    crate::types::TransitionRule {
-                        from: "in-dev".into(),
-                        to: "in-qa".into(),
-                        trigger: None,
-                        handoff_target: None,
-                        handoff_agent: None,
-                        halt_reason: None,
-                        halt_after: None,
-                        defined_in: "my-skill".into(),
-                    },
-                ],
+                transitions: vec![crate::types::TransitionRule {
+                    from: "in-dev".into(),
+                    to: "in-qa".into(),
+                    trigger: None,
+                    handoff_target: None,
+                    handoff_agent: None,
+                    halt_reason: None,
+                    halt_after: None,
+                    defined_in: "my-skill".into(),
+                }],
                 loop_md_path: PathBuf::from("skills/my-skill/LOOP.md"),
             },
         );
@@ -159,11 +157,7 @@ mod tests {
 
     #[test]
     fn build_adjacency_multiple_transitions() {
-        let transitions = vec![
-            t("a", "b"),
-            t("a", "c"),
-            t("b", "c"),
-        ];
+        let transitions = vec![t("a", "b"), t("a", "c"), t("b", "c")];
         let adj = build_adjacency(&transitions);
         assert_eq!(adj.len(), 2);
         assert_eq!(adj.get("a").unwrap(), &vec!["b", "c"]);
@@ -213,10 +207,7 @@ mod tests {
 
     #[test]
     fn detect_terminal_states_multiple_sinks() {
-        let transitions = vec![
-            t("a", "b"),
-            t("a", "c"),
-        ];
+        let transitions = vec![t("a", "b"), t("a", "c")];
         let terminals = detect_terminal_states(&transitions);
         assert_eq!(terminals.len(), 2);
         assert!(terminals.contains("b"));
@@ -231,11 +222,7 @@ mod tests {
 
     #[test]
     fn all_states_collects_every_unique_node() {
-        let transitions = vec![
-            t("a", "b"),
-            t("b", "c"),
-            t("c", "a"),
-        ];
+        let transitions = vec![t("a", "b"), t("b", "c"), t("c", "a")];
         let states = all_states(&transitions);
         assert_eq!(states.len(), 3);
         assert!(states.contains("a"));

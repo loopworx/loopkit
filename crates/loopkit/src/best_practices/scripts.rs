@@ -29,7 +29,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 
     // If SKILL.md references commands but no scripts/ directory exists, warn
     if has_commands && !has_scripts_dir {
-        let line = content.lines()
+        let line = content
+            .lines()
             .enumerate()
             .find(|(_, l)| {
                 let trimmed = l.trim();
@@ -49,7 +50,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         let mut diag = Diagnostic::info(
             "skill-scripts-suggested",
             "SKILL.md references executable commands but no scripts/ directory exists. \
-             Consider bundling reusable, tested scripts for reliability".into(),
+             Consider bundling reusable, tested scripts for reliability"
+                .into(),
             path.clone(),
         );
         if let Some(l) = line {
@@ -180,7 +182,9 @@ mod tests {
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
-        assert!(diags.iter().any(|d| d.code == "skill-script-no-inline-deps"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-script-no-inline-deps"));
     }
 
     #[test]
@@ -198,7 +202,9 @@ mod tests {
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
-        assert!(!diags.iter().any(|d| d.code == "skill-script-no-inline-deps"));
+        assert!(!diags
+            .iter()
+            .any(|d| d.code == "skill-script-no-inline-deps"));
         // Still warns about --help
         assert!(diags.iter().any(|d| d.code == "skill-script-no-help"));
     }

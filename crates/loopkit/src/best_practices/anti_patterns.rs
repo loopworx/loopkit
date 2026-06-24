@@ -11,7 +11,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     };
 
     // Too many equivalent options
-    let option_re = Regex::new(r"(?i)(\d+)\s*(?:options?|ways?|approaches?|methods?)\s*(?:to|for)").expect("hardcoded regex");
+    let option_re = Regex::new(r"(?i)(\d+)\s*(?:options?|ways?|approaches?|methods?)\s*(?:to|for)")
+        .expect("hardcoded regex");
     for cap in option_re.captures_iter(&content) {
         if let Ok(n) = cap[1].parse::<u32>() {
             if n > 3 {
@@ -31,7 +32,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     // Magic numbers in code blocks
     let code_block_re = Regex::new(r"```[\s\S]*?```").expect("hardcoded regex");
     let magic_re = Regex::new(r"\b\d{2,}\b").expect("hardcoded regex");
-    let documented_re = Regex::new(r"(?i)(max|min|limit|timeout|retry|threshold|default)").expect("hardcoded regex");
+    let documented_re = Regex::new(r"(?i)(max|min|limit|timeout|retry|threshold|default)")
+        .expect("hardcoded regex");
 
     for m in code_block_re.find_iter(&content) {
         let block = m.as_str();
@@ -48,21 +50,25 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
             if !documented_re.is_match(context) {
                 let rel_line = block[..idx].lines().count();
                 let line_num = (block_start_line + rel_line + 1) as u32;
-                diags.push(Diagnostic::warning(
-                    "skill-magic-numbers",
-                    format!(
+                diags.push(
+                    Diagnostic::warning(
+                        "skill-magic-numbers",
+                        format!(
                         "Magic number '{}' found in code block at line ~{} without documentation",
                         num,
                         line_num
                     ),
-                    path.clone(),
-                ).at_line(line_num));
+                        path.clone(),
+                    )
+                    .at_line(line_num),
+                );
             }
         }
     }
 
     // Bare raise / punting to Claude
-    let bare_raise_re = Regex::new(r"(?m)^(?:try\s*:|except\s+\w*\s*:\s*\n\s*(?:raise|pass))").expect("hardcoded regex");
+    let bare_raise_re = Regex::new(r"(?m)^(?:try\s*:|except\s+\w*\s*:\s*\n\s*(?:raise|pass))")
+        .expect("hardcoded regex");
     if let Some(m) = bare_raise_re.find(&content) {
         let line = content[..m.start()].lines().count() as u32 + 1;
         diags.push(Diagnostic::warning(
@@ -78,8 +84,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
+
     use tempfile::tempdir;
 
     fn make_skill(name: &str, path: std::path::PathBuf, skill_md: std::path::PathBuf) -> Skill {
@@ -111,10 +116,7 @@ mod tests {
     fn magic_number_in_code_reports_warning() {
         let dir = tempdir().unwrap();
         let md_path = dir.path().join("SKILL.md");
-        std::fs::write(
-            &md_path,
-            "```\nlet x = 42;\n```",
-        ).unwrap();
+        std::fs::write(&md_path, "```\nlet x = 42;\n```").unwrap();
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
@@ -125,10 +127,7 @@ mod tests {
     fn documented_magic_number_no_warning() {
         let dir = tempdir().unwrap();
         let md_path = dir.path().join("SKILL.md");
-        std::fs::write(
-            &md_path,
-            "```\nlet max_retries = 42; // documented\n```",
-        ).unwrap();
+        std::fs::write(&md_path, "```\nlet max_retries = 42; // documented\n```").unwrap();
 
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);

@@ -12,14 +12,16 @@ pub fn load_config(root: &Path) -> Config {
                 Err(e) => {
                     eprintln!(
                         "warning: failed to parse {}: {}. Using defaults.",
-                        config_path.display(), e
+                        config_path.display(),
+                        e
                     );
                 }
             },
             Err(e) => {
                 eprintln!(
                     "warning: failed to read {}: {}. Using defaults.",
-                    config_path.display(), e
+                    config_path.display(),
+                    e
                 );
             }
         }

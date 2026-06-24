@@ -150,8 +150,15 @@ mod tests {
     fn linear_chain_no_errors() {
         let transitions = vec![t("a", "b"), t("b", "c")];
         let diags = validate(&transitions);
-        let errors: Vec<_> = diags.iter().filter(|d| d.severity == Severity::Error).collect();
-        assert!(errors.is_empty(), "Expected no errors but got: {:?}", errors);
+        let errors: Vec<_> = diags
+            .iter()
+            .filter(|d| d.severity == Severity::Error)
+            .collect();
+        assert!(
+            errors.is_empty(),
+            "Expected no errors but got: {:?}",
+            errors
+        );
     }
 
     #[test]
@@ -181,8 +188,9 @@ mod tests {
     fn self_loop_only_warning() {
         let transitions = vec![t("loop", "loop")];
         let diags = validate(&transitions);
-        assert!(diags.iter().any(|d| d.code == "graph-self-loop-only"
-            && d.severity == Severity::Warning));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "graph-self-loop-only" && d.severity == Severity::Warning));
     }
 
     #[test]

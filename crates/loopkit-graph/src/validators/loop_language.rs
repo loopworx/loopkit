@@ -27,10 +27,20 @@ pub fn validate(
         };
 
         // Check halt reason vocabulary
-        diags.extend(check_halt_vocabulary(&content, &skill.name, &loop_path, config));
+        diags.extend(check_halt_vocabulary(
+            &content,
+            &skill.name,
+            &loop_path,
+            config,
+        ));
 
         // Check verb vocabulary
-        diags.extend(check_verb_vocabulary(&content, &skill.name, &loop_path, config));
+        diags.extend(check_verb_vocabulary(
+            &content,
+            &skill.name,
+            &loop_path,
+            config,
+        ));
 
         // Check transition syntax
         diags.extend(check_transition_syntax(
@@ -54,9 +64,33 @@ fn check_halt_vocabulary(
     let halt_re = Regex::new(r"(?i)halt\s+(\w[\w-]*)").expect("hardcoded regex");
 
     let skip_words: &[&str] = &[
-        "the", "this", "that", "a", "an", "when", "if", "after", "iteration",
-        "and", "or", "all", "any", "current", "at", "in", "on", "to", "for",
-        "conditions", "condition", "is", "are", "as", "by", "with", "without",
+        "the",
+        "this",
+        "that",
+        "a",
+        "an",
+        "when",
+        "if",
+        "after",
+        "iteration",
+        "and",
+        "or",
+        "all",
+        "any",
+        "current",
+        "at",
+        "in",
+        "on",
+        "to",
+        "for",
+        "conditions",
+        "condition",
+        "is",
+        "are",
+        "as",
+        "by",
+        "with",
+        "without",
     ];
 
     for (line_num, line) in content.lines().enumerate() {
@@ -115,9 +149,28 @@ fn check_verb_vocabulary(
             // Skip common non-verb words
             if matches!(
                 verb_lower.as_str(),
-                "the" | "a" | "an" | "if" | "when" | "for" | "each" | "all" | "no" | "this"
-                    | "that" | "these" | "those" | "every" | "story" | "flag" | "flags"
-                    | "field" | "fields" | "in" | "on" | "at"
+                "the"
+                    | "a"
+                    | "an"
+                    | "if"
+                    | "when"
+                    | "for"
+                    | "each"
+                    | "all"
+                    | "no"
+                    | "this"
+                    | "that"
+                    | "these"
+                    | "those"
+                    | "every"
+                    | "story"
+                    | "flag"
+                    | "flags"
+                    | "field"
+                    | "fields"
+                    | "in"
+                    | "on"
+                    | "at"
             ) {
                 continue;
             }
@@ -176,10 +229,33 @@ fn is_likely_action_verb(verb: &str, line: &str) -> bool {
     let lower = verb.to_lowercase();
     !matches!(
         lower.as_str(),
-        "if" | "when" | "for" | "each" | "all" | "no" | "this"
-            | "that" | "these" | "those" | "every" | "story" | "flag" | "flags"
-            | "field" | "fields" | "in" | "on" | "at" | "the" | "a" | "an"
-            | "is" | "are" | "was" | "were" | "be" | "been"
+        "if" | "when"
+            | "for"
+            | "each"
+            | "all"
+            | "no"
+            | "this"
+            | "that"
+            | "these"
+            | "those"
+            | "every"
+            | "story"
+            | "flag"
+            | "flags"
+            | "field"
+            | "fields"
+            | "in"
+            | "on"
+            | "at"
+            | "the"
+            | "a"
+            | "an"
+            | "is"
+            | "are"
+            | "was"
+            | "were"
+            | "be"
+            | "been"
     )
 }
 
@@ -194,8 +270,7 @@ fn check_transition_syntax(
     if let Some(body) = extract_section_body(content, "State Transition Rule") {
         let has_transition_directive = body.lines().any(|line| {
             let trimmed = line.trim();
-            trimmed.starts_with("transition ")
-                && (trimmed.contains('→') || trimmed.contains("->"))
+            trimmed.starts_with("transition ") && (trimmed.contains('→') || trimmed.contains("->"))
         });
         let has_table = body.contains("| from") || body.contains("| From");
 
@@ -224,12 +299,8 @@ mod tests {
     fn halt_vocabulary_recognizes_standard_reason() {
         let config = Config::default();
         let content = "halt stall after 5 iterations";
-        let diags = check_halt_vocabulary(
-            content,
-            "test",
-            std::path::Path::new("LOOP.md"),
-            &config,
-        );
+        let diags =
+            check_halt_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
         assert!(diags.is_empty());
     }
 
@@ -238,12 +309,8 @@ mod tests {
         let mut config = Config::default();
         config.halt_reasons = vec!["stall".to_string()];
         let content = "halt timeout after 3 iterations";
-        let diags = check_halt_vocabulary(
-            content,
-            "test",
-            std::path::Path::new("LOOP.md"),
-            &config,
-        );
+        let diags =
+            check_halt_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
         assert!(!diags.is_empty());
     }
 
@@ -267,13 +334,13 @@ mod tests {
         let mut config = Config::default();
         config.standard_verbs = vec!["trigger".to_string(), "handoff".to_string()];
         let content = "1. trigger the thing\n2. handoff to agent\n";
-        let diags = check_verb_vocabulary(
-            content,
-            "test",
-            std::path::Path::new("LOOP.md"),
-            &config,
+        let diags =
+            check_verb_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
+        assert!(
+            diags.is_empty(),
+            "Expected no warnings but got: {:?}",
+            diags
         );
-        assert!(diags.is_empty(), "Expected no warnings but got: {:?}", diags);
     }
 
     #[test]
@@ -281,12 +348,8 @@ mod tests {
         let mut config = Config::default();
         config.standard_verbs = vec!["trigger".to_string()];
         let content = "1. flurbish the widget\n";
-        let diags = check_verb_vocabulary(
-            content,
-            "test",
-            std::path::Path::new("LOOP.md"),
-            &config,
-        );
+        let diags =
+            check_verb_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
         assert!(!diags.is_empty());
         assert!(diags.iter().any(|d| d.code == "loop-nonstandard-verb"));
     }
@@ -296,12 +359,8 @@ mod tests {
         let mut config = Config::default();
         config.standard_verbs = vec!["trigger".to_string()];
         let content = "1. after the event\n";
-        let diags = check_verb_vocabulary(
-            content,
-            "test",
-            std::path::Path::new("LOOP.md"),
-            &config,
-        );
+        let diags =
+            check_verb_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
         assert!(diags.is_empty());
     }
 
@@ -355,12 +414,8 @@ no transitions here
         let config = Config::default();
         // "the" is a skip word, so halt the should be ignored
         let content = "halt the iteration";
-        let diags = check_halt_vocabulary(
-            content,
-            "test",
-            std::path::Path::new("LOOP.md"),
-            &config,
-        );
+        let diags =
+            check_halt_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
         assert!(diags.is_empty());
     }
 
@@ -420,12 +475,14 @@ transition in-dev → in-qa
         }];
         let all_handoffs: HashMap<String, crate::types::LoopContract> = HashMap::new();
         let mut config = Config::default();
-        config.standard_verbs = vec![
-            "trigger".into(), "handoff".into(), "halt".into(),
-        ];
+        config.standard_verbs = vec!["trigger".into(), "handoff".into(), "halt".into()];
         config.halt_reasons = vec!["stall".into()];
 
         let diags = validate(&skills, &all_handoffs, &config);
-        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
+        assert!(
+            diags.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            diags
+        );
     }
 }

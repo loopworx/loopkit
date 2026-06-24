@@ -43,7 +43,12 @@ fn main() {
         eprintln!();
     }
 
-    diagnostics.extend(validators::run_all(&cli.path, &config, &skills, cli.verbose));
+    diagnostics.extend(validators::run_all(
+        &cli.path,
+        &config,
+        &skills,
+        cli.verbose,
+    ));
     diagnostics.extend(loopkit::best_practices::check_all(&skills, cli.verbose));
 
     let error_count = diagnostics

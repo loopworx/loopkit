@@ -175,7 +175,6 @@ pub fn check_consistency(skills: &[Skill]) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     fn make_skill(name: &str) -> Skill {
         Skill {
@@ -214,20 +213,14 @@ mod tests {
 
     #[test]
     fn mixed_patterns_reports_warning() {
-        let skills = vec![
-            make_skill("running-tests"),
-            make_skill("helper"),
-        ];
+        let skills = vec![make_skill("running-tests"), make_skill("helper")];
         let diags = check_consistency(&skills);
         assert!(diags.iter().any(|d| d.code == "skill-naming-inconsistent"));
     }
 
     #[test]
     fn consistent_patterns_no_warning() {
-        let skills = vec![
-            make_skill("running-tests"),
-            make_skill("building-code"),
-        ];
+        let skills = vec![make_skill("running-tests"), make_skill("building-code")];
         let diags = check_consistency(&skills);
         assert!(diags.is_empty());
     }

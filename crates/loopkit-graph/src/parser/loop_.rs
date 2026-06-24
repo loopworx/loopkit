@@ -1,5 +1,5 @@
-use loopkit_core::parser::skill::parse_sections;
 use crate::types::{LoopContract, LoopSection, CANONICAL_LOOP_SECTIONS};
+use loopkit_core::parser::skill::parse_sections;
 use std::path::Path;
 
 /// Parse a LOOP.md file and extract its section structure.
@@ -40,8 +40,7 @@ pub fn parse_loop_contract(path: &Path, skill_name: &str) -> Option<LoopContract
 
 fn is_canonical_loop_section(section: &LoopSection) -> bool {
     let name = section.name();
-    !matches!(section, LoopSection::Unknown(_))
-        && CANONICAL_LOOP_SECTIONS.contains(&name)
+    !matches!(section, LoopSection::Unknown(_)) && CANONICAL_LOOP_SECTIONS.contains(&name)
 }
 
 /// Verify that known canonical sections appear in the expected order.

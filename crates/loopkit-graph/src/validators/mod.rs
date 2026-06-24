@@ -18,7 +18,12 @@ use loopkit_core::types::{Config, Diagnostic, Severity, Skill};
 use std::collections::HashMap;
 
 /// Run all validators and return unified diagnostics.
-pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill], verbose: bool) -> Vec<Diagnostic> {
+pub fn run_all(
+    root: &std::path::Path,
+    config: &Config,
+    skills: &[Skill],
+    verbose: bool,
+) -> Vec<Diagnostic> {
     let all_handoffs: HashMap<String, LoopContract> =
         parse_all_handoffs(&config.skills_dir, skills);
     let transitions: Vec<Transition> = build_transitions(skills, &all_handoffs);
@@ -29,9 +34,18 @@ pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill], verbos
         ($label:expr, $call:expr) => {{
             let diags = $call;
             if verbose {
-                let e = diags.iter().filter(|d| d.severity == Severity::Error).count();
-                let w = diags.iter().filter(|d| d.severity == Severity::Warning).count();
-                let i = diags.iter().filter(|d| d.severity == Severity::Info).count();
+                let e = diags
+                    .iter()
+                    .filter(|d| d.severity == Severity::Error)
+                    .count();
+                let w = diags
+                    .iter()
+                    .filter(|d| d.severity == Severity::Warning)
+                    .count();
+                let i = diags
+                    .iter()
+                    .filter(|d| d.severity == Severity::Info)
+                    .count();
                 if e + w + i > 0 {
                     eprintln!("  {:>30}  {}E  {}W  {}I", $label, e, w, i);
                 } else {
@@ -46,19 +60,34 @@ pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill], verbos
     run!("graph", graph::validate(&transitions));
 
     // Simulation
-    run!("simulation", simulation::run_all(&transitions, config.max_iterations));
+    run!(
+        "simulation",
+        simulation::run_all(&transitions, config.max_iterations)
+    );
 
     // Loop language
-    run!("loop_language", loop_language::validate(skills, &all_handoffs, config));
+    run!(
+        "loop_language",
+        loop_language::validate(skills, &all_handoffs, config)
+    );
 
     // Loop sections
-    run!("loop_sections", loop_sections::validate(skills, &all_handoffs, config));
+    run!(
+        "loop_sections",
+        loop_sections::validate(skills, &all_handoffs, config)
+    );
 
     // State consistency (forward + reverse)
-    run!("state_consistency", state_consistency::validate(skills, &transitions, config));
+    run!(
+        "state_consistency",
+        state_consistency::validate(skills, &transitions, config)
+    );
 
     // Enforced states
-    run!("enforced_states", enforced_states::validate(&transitions, config));
+    run!(
+        "enforced_states",
+        enforced_states::validate(&transitions, config)
+    );
 
     // Deskcheck pattern
     run!("deskcheck", deskcheck::validate(&transitions, config));
@@ -67,16 +96,25 @@ pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill], verbos
     run!("bug_feedback", bug_feedback::validate(&transitions, config));
 
     // Loop completeness (skill + loop)
-    run!("loop_completeness", loop_completeness::validate(skills, &all_handoffs, config));
+    run!(
+        "loop_completeness",
+        loop_completeness::validate(skills, &all_handoffs, config)
+    );
 
     // Loop state files
     run!("loop_state_files", loop_state_files::validate(root, config));
 
     // Cross references
-    run!("cross_references", cross_references::validate(skills, skills, config));
+    run!(
+        "cross_references",
+        cross_references::validate(skills, skills, config)
+    );
 
     // Constraints
-    run!("constraints", constraints::validate(&transitions, skills, config));
+    run!(
+        "constraints",
+        constraints::validate(&transitions, skills, config)
+    );
 
     diagnostics
 }

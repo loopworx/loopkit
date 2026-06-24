@@ -56,7 +56,8 @@ pub fn simulate_loop(transitions: &[Transition], max_iterations: u32) -> Vec<Str
             }
         } else if !all_states.is_empty() {
             messages.push(
-                "No terminal states exist in the graph (all states have outbound edges)".to_string(),
+                "No terminal states exist in the graph (all states have outbound edges)"
+                    .to_string(),
             );
         }
     } else {
@@ -183,9 +184,7 @@ mod tests {
 
     #[test]
     fn given_linear_chain_when_simulating_then_no_violations() {
-        let transitions = make_transitions(vec![
-            ("start", "done", "skill1"),
-        ]);
+        let transitions = make_transitions(vec![("start", "done", "skill1")]);
         let messages = simulate_loop(&transitions, 20);
         assert!(messages.is_empty(), "expected no messages: {messages:?}");
     }
@@ -200,20 +199,14 @@ mod tests {
 
     #[test]
     fn given_no_terminals_when_simulating_then_all_entries_unreachable() {
-        let transitions = make_transitions(vec![
-            ("start", "loop", "s1"),
-            ("loop", "start", "s1"),
-        ]);
+        let transitions = make_transitions(vec![("start", "loop", "s1"), ("loop", "start", "s1")]);
         let messages = simulate_loop(&transitions, 20);
         assert!(!messages.is_empty());
     }
 
     #[test]
     fn given_self_loop_only_when_simulating_then_warned() {
-        let transitions = make_transitions(vec![
-            ("start", "loop", "s1"),
-            ("loop", "loop", "s1"),
-        ]);
+        let transitions = make_transitions(vec![("start", "loop", "s1"), ("loop", "loop", "s1")]);
         let messages = simulate_loop(&transitions, 20);
         assert!(messages.iter().any(|m| m.contains("self-loop")));
     }
@@ -232,10 +225,7 @@ mod tests {
 
     #[test]
     fn given_budget_sufficient_when_simulating_then_reachable() {
-        let transitions = make_transitions(vec![
-            ("a", "b", "s1"),
-            ("b", "done", "s1"),
-        ]);
+        let transitions = make_transitions(vec![("a", "b", "s1"), ("b", "done", "s1")]);
         let messages = simulate_loop(&transitions, 20);
         assert!(messages.is_empty(), "expected no messages: {messages:?}");
     }

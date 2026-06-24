@@ -115,10 +115,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
             let line = find_yaml_line("description");
             let mut diag = Diagnostic::error(
                 "skill-description-too-long",
-                format!(
-                    "description exceeds 1024 characters ({} chars)",
-                    desc.len()
-                ),
+                format!("description exceeds 1024 characters ({} chars)", desc.len()),
                 path.clone(),
             );
             if let Some(l) = line {
@@ -139,10 +136,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
             diags.push(diag);
         }
         let lower = desc.to_lowercase();
-        if lower.starts_with("i ")
-            || lower.starts_with("you ")
-            || lower.starts_with("we ")
-        {
+        if lower.starts_with("i ") || lower.starts_with("you ") || lower.starts_with("we ") {
             let line = find_yaml_line("description");
             let mut diag = Diagnostic::warning(
                 "skill-description-not-third-person",
@@ -224,7 +218,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         if key.starts_with("metadata.") {
             let parts: Vec<&str> = key.split('.').collect();
             if parts.len() > 2 {
-                let line = find_yaml_line(&parts.last().unwrap_or(&""));
+                let line = find_yaml_line(parts.last().unwrap_or(&""));
                 let mut diag = Diagnostic::warning(
                     "skill-metadata-deep-nesting",
                     format!(
@@ -243,8 +237,15 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 
     // Check for unknown frontmatter keys (beyond spec + common extensions)
     let known_keys: &[&str] = &[
-        "name", "description", "license", "compatibility", "metadata",
-        "allowed-tools", "level", "owner", "trigger",
+        "name",
+        "description",
+        "license",
+        "compatibility",
+        "metadata",
+        "allowed-tools",
+        "level",
+        "owner",
+        "trigger",
     ];
     for key in raw_frontmatter.keys() {
         // Allow dotted sub-keys of known parents (e.g., metadata.category)
@@ -273,7 +274,6 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     fn make_skill(name: &str, description: &str) -> Skill {
         Skill {
@@ -298,10 +298,7 @@ mod tests {
 
     #[test]
     fn name_too_long_reports_error() {
-        let skill = make_skill(
-            &"a".repeat(65),
-            "A test skill",
-        );
+        let skill = make_skill(&"a".repeat(65), "A test skill");
         let diags = check(&skill);
         assert!(diags.iter().any(|d| d.code == "skill-name-too-long"));
     }
@@ -345,7 +342,9 @@ mod tests {
     fn first_person_reports_warning() {
         let skill = make_skill("test-skill", "I can do things");
         let diags = check(&skill);
-        assert!(diags.iter().any(|d| d.code == "skill-description-not-third-person"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-description-not-third-person"));
     }
 
     #[test]

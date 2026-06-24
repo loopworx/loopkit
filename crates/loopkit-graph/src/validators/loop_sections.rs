@@ -48,7 +48,8 @@ pub fn validate(
                     location: FileLocation::new(loop_path.clone()),
                     help: "Canonical order: Entry Conditions -> Loop State Schema -> \
                         Single Iteration Step -> Proof of Progress -> State Transition Rule -> \
-                        Halt Conditions -> Handoff Target".to_string(),
+                        Halt Conditions -> Handoff Target"
+                        .to_string(),
                 });
             }
 
@@ -65,9 +66,11 @@ pub fn validate(
                             &body[..body.len().min(50)]
                         ),
                         location: FileLocation::new(loop_path.clone()),
-                        help: "Only these 7 headings are valid: Entry Conditions, Loop State Schema, \
+                        help:
+                            "Only these 7 headings are valid: Entry Conditions, Loop State Schema, \
                             Single Iteration Step, Proof of Progress, State Transition Rule, \
-                            Halt Conditions, Handoff Target".to_string(),
+                            Halt Conditions, Handoff Target"
+                                .to_string(),
                     });
                 }
             }
@@ -138,7 +141,11 @@ handoff x to y
         let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
         let config = Config::default();
         let diags = validate(&skills, &all_handoffs, &config);
-        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
+        assert!(
+            diags.is_empty(),
+            "Expected no diagnostics but got: {:?}",
+            diags
+        );
     }
 
     #[test]
