@@ -164,8 +164,10 @@ mod tests {
 
         let skills = vec![make_skill("test-skill", skill_dir)];
         // Need a valid skills_dir for parse_all_handoffs
-        let mut config = Config::default();
-        config.skills_dir = dir.path().to_string_lossy().to_string();
+        let config = Config {
+            skills_dir: dir.path().to_string_lossy().to_string(),
+            ..Config::default()
+        };
 
         let diags = run_all(dir.path(), &config, &skills, false);
         // Just verify it returns diagnostics (will have some from various validators)

@@ -219,8 +219,10 @@ Current state is `in-dev`. Next is `in-qa`.
 
         let skills = vec![make_skill("test-skill", skill_dir)];
         let transitions = vec![t("in-dev", "in-qa")];
-        let mut config = Config::default();
-        config.state_model_aliases = vec!["State Model".to_string()];
+        let config = Config {
+            state_model_aliases: vec!["State Model".to_string()],
+            ..Config::default()
+        };
 
         let diags = validate(&skills, &transitions, &config);
         assert!(
@@ -246,8 +248,10 @@ This skill handles `in-dev`.
 
         let skills = vec![make_skill("test-skill", skill_dir)];
         let transitions = vec![t("in-dev", "in-qa")];
-        let mut config = Config::default();
-        config.state_model_aliases = vec!["State Model".to_string()];
+        let config = Config {
+            state_model_aliases: vec!["State Model".to_string()],
+            ..Config::default()
+        };
 
         let diags = validate(&skills, &transitions, &config);
         assert!(diags
@@ -271,8 +275,10 @@ States: `in-dev`, `in-qa`, `orphan-state`.
 
         let skills = vec![make_skill("test-skill", skill_dir)];
         let transitions = vec![t("in-dev", "in-qa")];
-        let mut config = Config::default();
-        config.state_model_aliases = vec!["State Model".to_string()];
+        let config = Config {
+            state_model_aliases: vec!["State Model".to_string()],
+            ..Config::default()
+        };
 
         let diags = validate(&skills, &transitions, &config);
         assert!(diags
@@ -347,8 +353,10 @@ States: `in-dev`, `in-qa`, `orphan-state`.
 
         let skills = vec![make_skill("test-skill", skill_dir)];
         let transitions = vec![t("in-dev", "in-qa")];
-        let mut config = Config::default();
-        config.state_model_aliases = vec!["State Model".to_string()];
+        let config = Config {
+            state_model_aliases: vec!["State Model".to_string()],
+            ..Config::default()
+        };
         let diags = validate(&skills, &transitions, &config);
         // Both states undeclared in skill (empty section body → no states extracted)
         assert!(diags.iter().any(|d| d.code == "state-undeclared-in-skill"));

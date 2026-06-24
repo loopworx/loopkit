@@ -139,46 +139,47 @@ mod tests {
     }
 
     fn test_config() -> Config {
-        let mut config = Config::default();
-        config.enforced_states = vec![
-            loopkit_core::types::EnforcedState {
-                name: "in-analysis".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-            loopkit_core::types::EnforcedState {
-                name: "in-dev".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-            loopkit_core::types::EnforcedState {
-                name: "in-deskcheck".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-            loopkit_core::types::EnforcedState {
-                name: "in-qa".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-            loopkit_core::types::EnforcedState {
-                name: "in-acceptance".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-            loopkit_core::types::EnforcedState {
-                name: "done".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-        ];
-        config.halt_reasons = vec![
-            "stall".into(),
-            "ambiguous".into(),
-            "human-gate".into(),
-            "unsafe".into(),
-        ];
-        config
+        Config {
+            enforced_states: vec![
+                loopkit_core::types::EnforcedState {
+                    name: "in-analysis".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+                loopkit_core::types::EnforcedState {
+                    name: "in-dev".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+                loopkit_core::types::EnforcedState {
+                    name: "in-deskcheck".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+                loopkit_core::types::EnforcedState {
+                    name: "in-qa".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+                loopkit_core::types::EnforcedState {
+                    name: "in-acceptance".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+                loopkit_core::types::EnforcedState {
+                    name: "done".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+            ],
+            halt_reasons: vec![
+                "stall".into(),
+                "ambiguous".into(),
+                "human-gate".into(),
+                "unsafe".into(),
+            ],
+            ..Config::default()
+        }
     }
 
     #[test]

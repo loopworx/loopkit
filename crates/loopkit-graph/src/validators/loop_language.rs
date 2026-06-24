@@ -306,8 +306,10 @@ mod tests {
 
     #[test]
     fn halt_vocabulary_flags_unknown_reason() {
-        let mut config = Config::default();
-        config.halt_reasons = vec!["stall".to_string()];
+        let config = Config {
+            halt_reasons: vec!["stall".to_string()],
+            ..Config::default()
+        };
         let content = "halt timeout after 3 iterations";
         let diags =
             check_halt_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
@@ -331,8 +333,10 @@ mod tests {
 
     #[test]
     fn check_verb_vocabulary_standard_verb_no_warning() {
-        let mut config = Config::default();
-        config.standard_verbs = vec!["trigger".to_string(), "handoff".to_string()];
+        let config = Config {
+            standard_verbs: vec!["trigger".to_string(), "handoff".to_string()],
+            ..Config::default()
+        };
         let content = "1. trigger the thing\n2. handoff to agent\n";
         let diags =
             check_verb_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
@@ -345,8 +349,10 @@ mod tests {
 
     #[test]
     fn check_verb_vocabulary_nonstandard_verb_warning() {
-        let mut config = Config::default();
-        config.standard_verbs = vec!["trigger".to_string()];
+        let config = Config {
+            standard_verbs: vec!["trigger".to_string()],
+            ..Config::default()
+        };
         let content = "1. flurbish the widget\n";
         let diags =
             check_verb_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
@@ -356,8 +362,10 @@ mod tests {
 
     #[test]
     fn check_verb_vocabulary_skips_temporal_conjunctions() {
-        let mut config = Config::default();
-        config.standard_verbs = vec!["trigger".to_string()];
+        let config = Config {
+            standard_verbs: vec!["trigger".to_string()],
+            ..Config::default()
+        };
         let content = "1. after the event\n";
         let diags =
             check_verb_vocabulary(content, "test", std::path::Path::new("LOOP.md"), &config);
@@ -474,9 +482,11 @@ transition in-dev → in-qa
             states: vec![],
         }];
         let all_handoffs: HashMap<String, crate::types::LoopContract> = HashMap::new();
-        let mut config = Config::default();
-        config.standard_verbs = vec!["trigger".into(), "handoff".into(), "halt".into()];
-        config.halt_reasons = vec!["stall".into()];
+        let config = Config {
+            standard_verbs: vec!["trigger".into(), "handoff".into(), "halt".into()],
+            halt_reasons: vec!["stall".into()],
+            ..Config::default()
+        };
 
         let diags = validate(&skills, &all_handoffs, &config);
         assert!(

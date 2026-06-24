@@ -252,6 +252,13 @@ Linters check style. loopkit checks **behavior**. A missing handoff target isn't
 
 ---
 
+## Documentation
+
+- [The Loop Language](docs/loop-language.md) — contract language for agent skills: states, transitions, halts, handoffs
+- [`.loopkit.yaml` Reference](docs/config-reference.md) — every config field, default values, design rationale
+
+---
+
 ## Development
 
 ```bash

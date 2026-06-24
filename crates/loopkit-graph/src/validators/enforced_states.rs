@@ -47,30 +47,31 @@ mod tests {
     }
 
     fn test_config() -> Config {
-        let mut config = Config::default();
-        config.enforced_states = vec![
-            EnforcedState {
-                name: "in-dev".into(),
-                agent: "developer".into(),
-                description: "".into(),
-            },
-            EnforcedState {
-                name: "in-qa".into(),
-                agent: "qa-agent".into(),
-                description: "".into(),
-            },
-            EnforcedState {
-                name: "done".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-            EnforcedState {
-                name: "halted-stall".into(),
-                agent: "".into(),
-                description: "".into(),
-            },
-        ];
-        config
+        Config {
+            enforced_states: vec![
+                EnforcedState {
+                    name: "in-dev".into(),
+                    agent: "developer".into(),
+                    description: "".into(),
+                },
+                EnforcedState {
+                    name: "in-qa".into(),
+                    agent: "qa-agent".into(),
+                    description: "".into(),
+                },
+                EnforcedState {
+                    name: "done".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+                EnforcedState {
+                    name: "halted-stall".into(),
+                    agent: "".into(),
+                    description: "".into(),
+                },
+            ],
+            ..Config::default()
+        }
     }
 
     #[test]
