@@ -202,14 +202,56 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         }
     }
 
+    // Validate metadata: must be string-to-string map
+    // Check metadata inline values for proper nesting
+    if let Some(meta_val) = raw_frontmatter.get("metadata") {
+        if meta_val.contains('{') || meta_val.contains('[') {
+            let line = find_yaml_line("metadata");
+            let mut diag = Diagnostic::warning(
+                "skill-metadata-inline-map",
+                "metadata should use indented sub-keys, not inline maps. Use:\n  metadata:\n    category: my-category".into(),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+    }
+
+    // Check that metadata sub-keys are not further nested (must be string values)
+    for key in raw_frontmatter.keys() {
+        if key.starts_with("metadata.") {
+            let parts: Vec<&str> = key.split('.').collect();
+            if parts.len() > 2 {
+                let line = find_yaml_line(&parts.last().unwrap_or(&""));
+                let mut diag = Diagnostic::warning(
+                    "skill-metadata-deep-nesting",
+                    format!(
+                        "metadata key '{}' is nested more than one level deep. metadata supports only string-to-string maps",
+                        key
+                    ),
+                    path.clone(),
+                );
+                if let Some(l) = line.or_else(|| find_yaml_line("metadata")) {
+                    diag = diag.at_line(l);
+                }
+                diags.push(diag);
+            }
+        }
+    }
+
     // Check for unknown frontmatter keys (beyond spec + common extensions)
     let known_keys: &[&str] = &[
         "name", "description", "license", "compatibility", "metadata",
-        "allowed-tools", "level", "owner", "trigger", "category",
+        "allowed-tools", "level", "owner", "trigger",
     ];
     for key in raw_frontmatter.keys() {
-        if !known_keys.contains(&key.as_str()) && !key.starts_with("x-") {
-            let line = find_yaml_line(key);
+        // Allow dotted sub-keys of known parents (e.g., metadata.category)
+        let base_key = key.split('.').next().unwrap_or(key);
+        if !known_keys.contains(&base_key) && !key.starts_with("x-") {
+            let term = key.split('.').next().unwrap_or(key);
+            let line = find_yaml_line(term);
             let mut diag = Diagnostic::warning(
                 "skill-unknown-frontmatter-key",
                 format!(

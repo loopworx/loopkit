@@ -22,18 +22,39 @@ pub fn parse_frontmatter(content: &str) -> (HashMap<String, String>, usize) {
             }
 
             let mut map = HashMap::new();
+            let mut current_parent: Option<String> = None;
+
             for line in yaml_str.lines() {
                 let trimmed = line.trim();
                 if trimmed.is_empty() || trimmed.starts_with('#') {
                     continue;
                 }
-                // Skip indented lines: they are sub-keys of a parent mapping (e.g., metadata:)
+
+                // Indented lines: sub-keys of a parent mapping
                 if line.starts_with(' ') || line.starts_with('\t') {
+                    if let Some(ref parent) = current_parent {
+                        if let Some((k, v)) = trimmed.split_once(':') {
+                            let key = format!("{}.{}", parent, k.trim());
+                            let val = v.trim().trim_matches('"').trim_matches('\'').to_string();
+                            map.insert(key, val);
+                        }
+                    }
                     continue;
                 }
+
+                // Top-level lines: reset parent tracking
+                current_parent = None;
+
                 if let Some((k, v)) = trimmed.split_once(':') {
                     let key = k.trim().to_string();
                     let val = v.trim().trim_matches('"').trim_matches('\'').to_string();
+
+                    // Track if this is a parent key with no inline value
+                    // (e.g., "metadata:" with indented sub-keys below)
+                    if val.is_empty() {
+                        current_parent = Some(key.clone());
+                    }
+
                     map.insert(key, val);
                 }
             }
@@ -211,8 +232,9 @@ pub fn parse_skill_dir(dir: &Path) -> Result<Option<Skill>, Vec<Diagnostic>> {
     let sections = parse_sections(&content);
 
     let category = frontmatter
-        .get("category")
+        .get("metadata.category")
         .cloned()
+        .or_else(|| frontmatter.get("category").cloned())
         .unwrap_or_else(|| {
             // Legacy: derive category from parent directory for nested structure
             dir.parent()
