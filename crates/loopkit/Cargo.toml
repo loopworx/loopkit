@@ -16,4 +16,7 @@ serde_json = "1.0"
 regex = "1.10"
 
 [dev-dependencies]
+loopkit-core = { path = "../loopkit-core" }
+loopkit-graph = { path = "../loopkit-graph" }
 tempfile = "3.10"
+serde_json = "1.0"
