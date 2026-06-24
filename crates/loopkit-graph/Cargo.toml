@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 loopkit-core = { path = "../loopkit-core" }
+lazy_static = "1.4"
 pulldown-cmark = "0.13"
 regex = "1.10"
 

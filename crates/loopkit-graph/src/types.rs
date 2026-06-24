@@ -24,6 +24,7 @@ pub struct TransitionRule {
     pub handoff_agent: Option<String>,
     pub halt_reason: Option<String>,
     pub halt_after: Option<u32>,
+    pub defined_in: String,
 }
 
 /// A resolved transition edge in the handoff graph.
@@ -79,7 +80,9 @@ impl LoopSection {
 /// Parsed representation of a LOOP.md file.
 #[derive(Debug, Clone)]
 pub struct LoopContract {
+    pub skill: String,
     pub sections: Vec<LoopSection>,
+    pub section_order_valid: bool,
     pub transitions: Vec<TransitionRule>,
     pub loop_md_path: std::path::PathBuf,
 }
