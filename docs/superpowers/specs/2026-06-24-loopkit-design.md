@@ -1,8 +1,9 @@
-# Skill Typechecker — Design Spec
+# loopkit — Design Spec
 
 **Date:** 2026-06-24
 **Status:** Draft, pending review
 **Replaces:** skill-loop-verifier v0.2.0
+**Repository:** github.com/loopworx/loopkit
 
 ## 1. Purpose
 
@@ -20,59 +21,59 @@ Nothing is optional. One run checks everything.
 Three crates in a Cargo workspace, layered by responsibility:
 
 ```
-skill-typechecker/
+loopkit/
 ├── Cargo.toml
 └── crates/
-    ├── skill-core/        # Types, parsers, discovery — no validation
-    ├── skill-loop/        # Graph, simulation, state/transition checks
-    └── skill-typecheck/   # CLI binary + best-practices checks
+    ├── loopkit-core/      # Types, parsers, discovery — no validation
+    ├── loopkit-graph/     # Graph, simulation, state/transition checks
+    └── loopkit/           # CLI binary + best-practices checks
 ```
 
-### 2.1 `skill-core` — universal, shared
+### 2.1 `loopkit-core` — universal, shared
 
 **Owns:** `Skill`, `Section`, `Diagnostic`, `Severity`, `FileLocation`, `Config`, SKILL.md parsing (frontmatter, sections, body extraction), file discovery, state-name validation.
 
 **Does NOT own:** loop contracts, transitions, graph, simulation, best-practices rules, CLI.
 
-### 2.2 `skill-loop` — loop-aware validation
+### 2.2 `loopkit-graph` — loop-aware validation
 
 **Owns:** `LoopContract`, `TransitionRule`, enforced states, graph construction (from core's transitions), all loop validators (graph, simulation, state consistency, loop language, loop sections, loop completeness, loop state files, cross-references, constraints), deskcheck sub-pattern validator.
 
-**Depends on:** `skill-core` only.
+**Depends on:** `loopkit-core` only.
 
 **Forge conventions live here:** LOOP.md structure, canonical sections, enforced state vocabulary, L1-RIGID / L2-GUIDED levels.
 
-**If a skill has no transitions:** `skill-loop` produces zero diagnostics (no-op). The skill passes loop validation trivially.
+**If a skill has no transitions:** `loopkit-graph` produces zero diagnostics (no-op). The skill passes loop validation trivially.
 
-### 2.3 `skill-typecheck` — CLI + best-practices
+### 2.3 `loopkit` — CLI + best-practices
 
 **Owns:** CLI (clap), JSON output formatter, all best-practices validators (frontmatter, naming, structure, progressive disclosure, terminology, workflow, anti-patterns).
 
-**Depends on:** `skill-core` and `skill-loop`.
+**Depends on:** `loopkit-core` and `loopkit-graph`.
 
-**Pipeline:** calls `skill-loop::validate_all()` and `best_practices::check_all()`, merges diagnostics, formats output.
+**Pipeline:** calls `loopkit-graph::validate_all()` and `best_practices::check_all()`, merges diagnostics, formats output.
 
 ### 2.4 Dependency graph
 
 ```
-skill-core
+loopkit-core
     ↑
-    ├── skill-loop (uses core types + parsers)
-    └── skill-typecheck (uses core types + parsers + loop validators)
+    ├── loopkit-graph (uses core types + parsers)
+    └── loopkit (uses core types + parsers + graph validators)
 ```
 
-`skill-loop` never depends on `skill-typecheck`, and vice versa. The CLI is the only crate that combines both layers.
+`loopkit-graph` never depends on `loopkit`, and vice versa. The CLI is the only crate that combines both layers.
 
 ---
 
 ## 3. Enforced Language
 
-The tool ships with a built-in default vocabulary. Every project can override it with a `.skill-typecheck.yaml` file at the skills directory root.
+The tool ships with a built-in default vocabulary. Every project can override it with a `.loopkit.yaml` file at the skills directory root.
 
 ### 3.1 Built-in defaults
 
 ```yaml
-# Shipped in skill-loop, overridable per project
+# Shipped in loopkit-graph, overridable per project
 
 standard_verbs:
   - trigger
@@ -189,7 +190,7 @@ Project config wins per field. Unspecified fields fall back to defaults.
 
 ## 4. What the Loop Verifier Proves
 
-With the enforced language applied, `skill-loop` proves:
+With the enforced language applied, `loopkit-graph` proves:
 
 1. **Vocabulary conformance** — every transition verb is in `standard_verbs`, every halt reason is in `halt_reasons`. Violation = Error.
 2. **State declaration** — every transition endpoint is declared in at least one State Model section (and reverse: every graph node is declared in prose).
@@ -204,7 +205,7 @@ With the enforced language applied, `skill-loop` proves:
 
 ## 5. Best-Practices Checks
 
-22 rules across 7 categories. All diagnostics emitted by `skill-typecheck`.
+22 rules across 7 categories. All diagnostics emitted by `loopkit` (the CLI crate).
 
 ### 5.1 Frontmatter (structural → Error unless noted)
 
@@ -273,8 +274,8 @@ With the enforced language applied, `skill-loop` proves:
 ### 6.1 Usage
 
 ```bash
-skill-typecheck path/to/skills/              # text output
-skill-typecheck path/to/skills/ --json       # machine-readable
+loopkit path/to/skills/              # text output
+loopkit path/to/skills/ --json       # machine-readable
 ```
 
 No flags for what to check. Default run = everything.
@@ -328,7 +329,7 @@ This design closes every high-severity gap identified across 4 rounds of analysi
 
 | Gap | Source | Fix location |
 |---|---|---|
-| ASCII `->` not recognized as transition arrow | R4-C1 | `skill-core` parser accepts both `→` (Unicode) and `->` (ASCII) |
+| ASCII `->` not recognized as transition arrow | R4-C1 | `loopkit-core` parser accepts both `→` (Unicode) and `->` (ASCII) |
 | `extract_section_body` vs `parse_sections` mismatch (formatted headings) | R4-C2 | Use pulldown_cmark byte offsets for body extraction |
 | `## State Model` hardcoded; aliases ignored | R2-R3, R3-5 | Config-driven `state_model_aliases` list |
 | No enforced-state validation | R3-Req3 | `enforced_states` config + `validate_enforced_states` |
@@ -350,15 +351,15 @@ This design closes every high-severity gap identified across 4 rounds of analysi
 
 | Current path | New path |
 |---|---|
-| `skill-loop-verifier/src/types.rs` | Split: universal types → `skill-core`, loop types → `skill-loop` |
-| `skill-loop-verifier/src/parser/` | `skill.rs`, `yaml.rs` → `skill-core`; `handoff.rs`, `loop_.rs` → `skill-loop` |
-| `skill-loop-verifier/src/repo.rs` | Split: discovery → `skill-core`, graph build → `skill-loop` |
-| `skill-loop-verifier/src/config.rs` | → `skill-core` (unified `Config`) |
-| `skill-loop-verifier/src/diagnostic.rs` | → `skill-core` |
-| `skill-loop-verifier/src/validators/` | → `skill-loop` |
-| `skill-loop-verifier/src/simulation/` | → `skill-loop` |
-| `skill-loop-verifier/src/lib.rs` | Becomes `skill-typecheck/src/main.rs` |
-| Tests | Split by crate. Existing tests → `skill-loop/tests/`. New tests → `skill-typecheck/tests/`. |
+| `skill-loop-verifier/src/types.rs` | Split: universal types → `loopkit-core`, loop types → `loopkit-graph` |
+| `skill-loop-verifier/src/parser/` | `skill.rs`, `yaml.rs` → `loopkit-core`; `handoff.rs`, `loop_.rs` → `loopkit-graph` |
+| `skill-loop-verifier/src/repo.rs` | Split: discovery → `loopkit-core`, graph build → `loopkit-graph` |
+| `skill-loop-verifier/src/config.rs` | → `loopkit-core` (unified `Config`) |
+| `skill-loop-verifier/src/diagnostic.rs` | → `loopkit-core` |
+| `skill-loop-verifier/src/validators/` | → `loopkit-graph` |
+| `skill-loop-verifier/src/simulation/` | → `loopkit-graph` |
+| `skill-loop-verifier/src/lib.rs` | Becomes `loopkit/src/main.rs` |
+| Tests | Split by crate. Existing tests → `loopkit-graph/tests/`. New tests → `loopkit/tests/`. |
 
 ---
 

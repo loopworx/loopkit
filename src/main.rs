@@ -1,7 +1,7 @@
-use skill_loop_verifier::config::load_config;
-use skill_loop_verifier::diagnostic::{diagnostics_json, format_diagnostics};
-use skill_loop_verifier::types::{Diagnostic, Repo, Severity};
-use skill_loop_verifier::validators::run_all;
+use loopkit::config::load_config;
+use loopkit::diagnostic::{diagnostics_json, format_diagnostics};
+use loopkit::types::{Diagnostic, Repo, Severity};
+use loopkit::validators::run_all;
 use std::path::PathBuf;
 
 fn main() {
@@ -70,14 +70,17 @@ fn parse_args(args: &[String]) -> (String, Option<String>) {
 }
 
 fn print_help() {
-    println!("skill-loop-verifier — Verify skill-based agent loops");
+    println!("loopkit — Prove your agent skill loops are correct");
     println!();
     println!("USAGE:");
-    println!("  skill-loop-verifier [OPTIONS]");
+    println!("  loopkit [OPTIONS] [PATH]");
+    println!();
+    println!("ARGS:");
+    println!("  <PATH>             Path to skills directory (default: skills/)");
     println!();
     println!("OPTIONS:");
     println!("  --root <path>       Repository root (default: current directory)");
-    println!("  --skills-dir <dir>  Skills directory name (default: from .loop-verifier.yaml)");
+    println!("  --skills-dir <dir>  Skills directory name (default: from .loopkit.yaml)");
     println!("  --json              Output diagnostics as JSON");
     println!("  -h, --help          Show this help");
 }
@@ -85,7 +88,7 @@ fn print_help() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use skill_loop_verifier::types::{Diagnostic, FileLocation, Severity};
+    use loopkit::types::{Diagnostic, FileLocation, Severity};
     use std::path::PathBuf;
 
     fn make_diag(code: &str, severity: Severity) -> Diagnostic {

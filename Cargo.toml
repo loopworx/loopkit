@@ -1,8 +1,8 @@
 [package]
-name = "skill-loop-verifier"
-version = "0.2.0"
+name = "loopkit"
+version = "0.3.0"
 edition = "2021"
-description = "Verify skill-based agent loops — parse, validate, graph, simulate"
+description = "Prove your agent skill loops are correct — state machine verification, enforced vocabulary, and Claude best-practices compliance"
 
 [dependencies]
 pulldown-cmark = "0.13"
