@@ -4,15 +4,49 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
     let path = skill.skill_md.clone();
 
+    let content = std::fs::read_to_string(&path).unwrap_or_default();
+
+    // Helper: find the line number of a YAML key in the frontmatter
+    let find_yaml_line = |key: &str| -> Option<u32> {
+        content.lines().enumerate().find_map(|(i, line)| {
+            if line.trim_start().starts_with(&format!("{}:", key)) {
+                Some((i + 1) as u32)
+            } else {
+                None
+            }
+        })
+    };
+
+    // Helper: find the --- end marker of frontmatter
+    let find_frontmatter_end = || -> Option<u32> {
+        let mut in_frontmatter = false;
+        for (i, line) in content.lines().enumerate() {
+            if i == 0 && line.trim() == "---" {
+                in_frontmatter = true;
+                continue;
+            }
+            if in_frontmatter && line.trim() == "---" {
+                return Some((i + 1) as u32);
+            }
+        }
+        None
+    };
+
     if skill.name.is_empty() {
-        diags.push(Diagnostic::error(
+        let line = find_yaml_line("name").or_else(find_frontmatter_end);
+        let mut diag = Diagnostic::error(
             "skill-missing-name",
             "name field missing from frontmatter".into(),
             path.clone(),
-        ));
+        );
+        if let Some(l) = line {
+            diag = diag.at_line(l);
+        }
+        diags.push(diag);
     } else {
         if skill.name.len() > 64 {
-            diags.push(Diagnostic::error(
+            let line = find_yaml_line("name");
+            let mut diag = Diagnostic::error(
                 "skill-name-too-long",
                 format!(
                     "name '{}' exceeds 64 characters ({} chars)",
@@ -20,71 +54,105 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
                     skill.name.len()
                 ),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
         if skill
             .name
             .chars()
             .any(|c| !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '-')
         {
-            diags.push(Diagnostic::error(
+            let line = find_yaml_line("name");
+            let mut diag = Diagnostic::error(
                 "skill-name-invalid-chars",
                 format!(
                     "name '{}' contains invalid characters (only [a-z0-9-] allowed)",
                     skill.name
                 ),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
         for reserved in &["anthropic", "claude"] {
             if skill.name.contains(reserved) {
-                diags.push(Diagnostic::error(
+                let line = find_yaml_line("name");
+                let mut diag = Diagnostic::error(
                     "skill-name-reserved-word",
                     format!(
                         "name '{}' contains reserved word '{}'",
                         skill.name, reserved
                     ),
                     path.clone(),
-                ));
+                );
+                if let Some(l) = line {
+                    diag = diag.at_line(l);
+                }
+                diags.push(diag);
             }
         }
     }
 
     let desc = &skill.description;
     if desc.is_empty() {
-        diags.push(Diagnostic::error(
+        let line = find_yaml_line("description").or_else(find_frontmatter_end);
+        let mut diag = Diagnostic::error(
             "skill-missing-description",
             "description field missing from frontmatter".into(),
             path.clone(),
-        ));
+        );
+        if let Some(l) = line {
+            diag = diag.at_line(l);
+        }
+        diags.push(diag);
     } else {
         if desc.len() > 1024 {
-            diags.push(Diagnostic::error(
+            let line = find_yaml_line("description");
+            let mut diag = Diagnostic::error(
                 "skill-description-too-long",
                 format!(
                     "description exceeds 1024 characters ({} chars)",
                     desc.len()
                 ),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
         if desc.contains('<') && desc.contains('>') {
-            diags.push(Diagnostic::error(
+            let line = find_yaml_line("description");
+            let mut diag = Diagnostic::error(
                 "skill-description-xml-tag",
                 "description contains XML tags".into(),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
         let lower = desc.to_lowercase();
         if lower.starts_with("i ")
             || lower.starts_with("you ")
             || lower.starts_with("we ")
         {
-            diags.push(Diagnostic::warning(
+            let line = find_yaml_line("description");
+            let mut diag = Diagnostic::warning(
                 "skill-description-not-third-person",
                 "description appears to use first/second person. Use third person: 'Processes...' not 'I can...'".into(),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
     }
 

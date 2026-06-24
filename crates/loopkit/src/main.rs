@@ -28,7 +28,7 @@ fn main() {
     let (skills, discovery_diags) = discover_skills(&skills_dir);
     let mut diagnostics = discovery_diags;
 
-    diagnostics.extend(validators::run_all(&config, &skills));
+    diagnostics.extend(validators::run_all(&cli.path, &config, &skills));
     diagnostics.extend(loopkit::best_practices::check_all(&skills));
 
     let error_count = diagnostics

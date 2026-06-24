@@ -1,8 +1,8 @@
 use loopkit_core::types::{Config, Diagnostic, FileLocation, Severity};
-use std::path::PathBuf;
+use std::path::Path;
 
 /// Check that loop state tracking files exist in the docs/ directory.
-pub fn validate(config: &Config) -> Vec<Diagnostic> {
+pub fn validate(root: &Path, config: &Config) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
 
     let expected_files = [
@@ -11,7 +11,7 @@ pub fn validate(config: &Config) -> Vec<Diagnostic> {
     ];
 
     for (path, desc) in &expected_files {
-        let full_path = PathBuf::from(path);
+        let full_path = root.join(path);
         if !full_path.exists() {
             diags.push(Diagnostic {
                 severity: Severity::Info,
@@ -39,7 +39,8 @@ mod tests {
     #[test]
     fn no_docs_files_emits_info() {
         let config = Config::default();
-        let diags = validate(&config);
+        let root = std::path::PathBuf::from(tempfile::TempDir::new().unwrap().path());
+        let diags = validate(&root, &config);
         assert!(!diags.is_empty());
         assert!(diags.iter().all(|d| d.code == "loop-state-file-missing"));
         assert!(diags.iter().all(|d| d.severity == Severity::Info));
@@ -47,12 +48,13 @@ mod tests {
 
     #[test]
     fn with_docs_files_present_no_diagnostics() {
-        let _dir = tempfile::TempDir::new().unwrap();
-        // We can't easily test the "present" case since the paths are
-        // hardcoded to docs/ relative to CWD. But we verify the function
-        // at least runs and parses both expected paths.
+        let dir = tempfile::TempDir::new().unwrap();
+        let docs = dir.path().join("docs");
+        std::fs::create_dir(&docs).unwrap();
+        std::fs::write(docs.join("inception.loop.md"), "").unwrap();
+        std::fs::write(docs.join("iteration-board.loop.md"), "").unwrap();
         let config = Config::default();
-        let _ = validate(&config);
-        // Function ran without panicking
+        let diags = validate(dir.path(), &config);
+        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
     }
 }

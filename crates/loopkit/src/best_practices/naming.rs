@@ -4,31 +4,52 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
     let path = skill.skill_md.clone();
 
+    let content = std::fs::read_to_string(&path).unwrap_or_default();
+    let find_name_line = || -> Option<u32> {
+        content.lines().enumerate().find_map(|(i, line)| {
+            if line.trim_start().starts_with("name:") {
+                Some((i + 1) as u32)
+            } else {
+                None
+            }
+        })
+    };
+
     if !skill.name.is_empty() {
         let first_word = skill.name.split('-').next().unwrap_or("");
         if !first_word.ends_with("ing") {
-            diags.push(Diagnostic::warning(
+            let line = find_name_line();
+            let mut diag = Diagnostic::warning(
                 "skill-name-not-gerund",
                 format!(
                     "name '{}' does not start with a gerund (-ing word). Consider a verb form like 'running-tests'",
                     skill.name
                 ),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
     }
 
     let vague_names = ["helper", "utils", "tools", "misc"];
     for vague in &vague_names {
         if skill.name.contains(vague) {
-            diags.push(Diagnostic::warning(
+            let line = find_name_line();
+            let mut diag = Diagnostic::warning(
                 "skill-name-vague",
                 format!(
                     "name '{}' contains vague term '{}'. Use a specific, descriptive name",
                     skill.name, vague
                 ),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
     }
 

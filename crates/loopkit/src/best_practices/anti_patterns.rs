@@ -15,6 +15,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     for cap in option_re.captures_iter(&content) {
         if let Ok(n) = cap[1].parse::<u32>() {
             if n > 3 {
+                let line = content[..cap.get(0).unwrap().start()].lines().count() as u32 + 1;
                 diags.push(Diagnostic::warning(
                     "skill-too-many-options",
                     format!(
@@ -22,7 +23,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
                         n
                     ),
                     path.clone(),
-                ));
+                ).at_line(line));
             }
         }
     }
@@ -46,27 +47,29 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 
             if !documented_re.is_match(context) {
                 let rel_line = block[..idx].lines().count();
+                let line_num = (block_start_line + rel_line + 1) as u32;
                 diags.push(Diagnostic::warning(
                     "skill-magic-numbers",
                     format!(
                         "Magic number '{}' found in code block at line ~{} without documentation",
                         num,
-                        block_start_line + rel_line + 1
+                        line_num
                     ),
                     path.clone(),
-                ));
+                ).at_line(line_num));
             }
         }
     }
 
     // Bare raise / punting to Claude
     let bare_raise_re = Regex::new(r"(?m)^(?:try\s*:|except\s+\w*\s*:\s*\n\s*(?:raise|pass))").expect("hardcoded regex");
-    if bare_raise_re.is_match(&content) {
+    if let Some(m) = bare_raise_re.find(&content) {
+        let line = content[..m.start()].lines().count() as u32 + 1;
         diags.push(Diagnostic::warning(
             "skill-punts-to-claude",
             "Bare except clause with raise/pass detected. Consider providing error handling guidance".into(),
             path.clone(),
-        ));
+        ).at_line(line));
     }
 
     diags

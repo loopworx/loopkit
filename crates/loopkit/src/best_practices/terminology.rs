@@ -27,7 +27,23 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
             }
         }
         if found.len() >= 2 {
-            diags.push(Diagnostic::warning(
+            // Find the line where the second conflicting word appears
+            let mut conflict_line: Option<u32> = None;
+            let first = found[0];
+            for (i, line) in content.lines().enumerate() {
+                let line_lower = line.to_lowercase();
+                for w in found.iter().skip(1) {
+                    if line_lower.contains(*w) && first != *w {
+                        conflict_line = Some((i + 1) as u32);
+                        break;
+                    }
+                }
+                if conflict_line.is_some() {
+                    break;
+                }
+            }
+
+            let mut diag = Diagnostic::warning(
                 "skill-term-inconsistency",
                 format!(
                     "Multiple synonyms for the same concept found in SKILL.md: {}. \
@@ -35,7 +51,11 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
                     found.join(", ")
                 ),
                 path.clone(),
-            ));
+            );
+            if let Some(line) = conflict_line {
+                diag = diag.at_line(line);
+            }
+            diags.push(diag);
         }
     }
 

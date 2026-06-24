@@ -23,24 +23,26 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     }
 
     // Windows-style path detection
-    if content.contains('\\') {
+    if let Some(pos) = content.find('\\') {
+        let line = content[..pos].lines().count() as u32 + 1;
         diags.push(Diagnostic::error(
             "skill-windows-path",
             "SKILL.md contains Windows-style paths (backslash). Use forward slashes".into(),
             path.clone(),
-        ));
+        ).at_line(line));
     }
 
     // Time-sensitive language detection
     let time_re = Regex::new(
         r"(?i)(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}"
     ).expect("hardcoded regex");
-    if time_re.is_match(&content) {
+    if let Some(m) = time_re.find(&content) {
+        let line = content[..m.start()].lines().count() as u32 + 1;
         diags.push(Diagnostic::warning(
             "skill-time-sensitive",
             "SKILL.md contains date-specific language (e.g., 'March 2024'). Consider using relative framing".into(),
             path.clone(),
-        ));
+        ).at_line(line));
     }
 
     // Reference chain depth detection (A references B, B references C = depth 2+)

@@ -55,11 +55,23 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         let has_test_like = content.to_lowercase().contains("test")
             || content.to_lowercase().contains("validate");
         if has_test_like && content.to_lowercase().contains("implement") {
-            diags.push(Diagnostic::warning(
+            let line = content.lines()
+                .enumerate()
+                .find(|(_, l)| {
+                    let lower_l = l.to_lowercase();
+                    (lower_l.contains("test") || lower_l.contains("validate"))
+                        && lower_l.contains("implement")
+                })
+                .map(|(i, _)| (i + 1) as u32);
+            let mut diag = Diagnostic::warning(
                 "skill-missing-feedback-loop",
                 "Workflow mentions validation and implementation but no explicit feedback loop pattern. Consider adding a validate → fix → repeat cycle".into(),
                 path.clone(),
-            ));
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
         }
     }
 
@@ -73,11 +85,25 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         || content.contains("decide")
         || content.contains("determine");
     if has_choice && !has_conditional {
-        diags.push(Diagnostic::warning(
+        let line = content.lines()
+            .enumerate()
+            .find(|(_, l)| {
+                let lower_l = l.to_lowercase();
+                lower_l.contains("either")
+                    || lower_l.contains("choose")
+                    || lower_l.contains("decide")
+                    || lower_l.contains("determine")
+            })
+            .map(|(i, _)| (i + 1) as u32);
+        let mut diag = Diagnostic::warning(
             "skill-missing-conditionals",
             "Decision points detected but no explicit conditional structure (if/when/otherwise). Consider adding conditional branches".into(),
             path.clone(),
-        ));
+        );
+        if let Some(l) = line {
+            diag = diag.at_line(l);
+        }
+        diags.push(diag);
     }
 
     diags

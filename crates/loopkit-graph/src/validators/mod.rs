@@ -18,7 +18,7 @@ use loopkit_core::types::{Config, Diagnostic, Skill};
 use std::collections::HashMap;
 
 /// Run all validators and return unified diagnostics.
-pub fn run_all(config: &Config, skills: &[Skill]) -> Vec<Diagnostic> {
+pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill]) -> Vec<Diagnostic> {
     let all_handoffs: HashMap<String, LoopContract> =
         parse_all_handoffs(&config.skills_dir, skills);
     let transitions: Vec<Transition> = build_transitions(skills, &all_handoffs);
@@ -53,7 +53,7 @@ pub fn run_all(config: &Config, skills: &[Skill]) -> Vec<Diagnostic> {
     diagnostics.extend(loop_completeness::validate(skills, &all_handoffs, config));
 
     // Loop state files
-    diagnostics.extend(loop_state_files::validate(config));
+    diagnostics.extend(loop_state_files::validate(root, config));
 
     // Cross references
     diagnostics.extend(cross_references::validate(skills, skills));
@@ -88,7 +88,8 @@ mod tests {
     #[test]
     fn run_all_with_empty_skills_produces_diagnostics() {
         let config = Config::default();
-        let diags = run_all(&config, &[]);
+        let root = std::path::PathBuf::from(".");
+        let diags = run_all(&root, &config, &[]);
         // With empty skills, we expect diagnostics from:
         // - enforced_states (all missing)
         // - constraints (empty graph)
@@ -111,7 +112,7 @@ mod tests {
         let mut config = Config::default();
         config.skills_dir = dir.path().to_string_lossy().to_string();
 
-        let diags = run_all(&config, &skills);
+        let diags = run_all(dir.path(), &config, &skills);
         // Just verify it returns diagnostics (will have some from various validators)
         assert!(!diags.is_empty());
         let _: &Vec<Diagnostic> = &diags;

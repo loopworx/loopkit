@@ -25,7 +25,7 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
                     line_count
                 ),
                 path.clone(),
-            ));
+            ).at_line(line_count as u32));
         }
     }
 

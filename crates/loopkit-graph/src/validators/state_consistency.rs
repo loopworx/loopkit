@@ -38,7 +38,14 @@ pub fn validate(skills: &[Skill], transitions: &[Transition], config: &Config) -
 
             for state in &prose_states {
                 if !graph_states.contains(state.as_str()) {
-                    diags.push(Diagnostic {
+                    // Find the line in the State Model section where this state appears
+                    let state_line = content.lines().enumerate().find(|(_, line)| {
+                        let has_backtick = line.contains(&format!("`{}`", state));
+                        let has_no_backtick = line.contains(state.as_str()) && !line.contains('`');
+                        has_backtick || has_no_backtick
+                    }).map(|(i, _)| (i + 1) as u32);
+
+                    let mut diag = Diagnostic {
                         severity: Severity::Warning,
                         code: "state-undefined-in-graph".to_string(),
                         message: format!(
@@ -50,7 +57,11 @@ pub fn validate(skills: &[Skill], transitions: &[Transition], config: &Config) -
                             "Add a transition involving `{}` to some LOOP.md, or remove it from the State Model.",
                             state
                         ),
-                    });
+                    };
+                    if let Some(line) = state_line {
+                        diag = diag.at_line(line);
+                    }
+                    diags.push(diag);
                 }
             }
         }

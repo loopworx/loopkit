@@ -38,10 +38,7 @@ pub fn validate(skills: &[Skill], _all_skills: &[Skill]) -> Vec<Diagnostic> {
                             ),
                             location: FileLocation::new(loop_path.clone())
                                 .at_line((line_num + 1) as u32),
-                            help: format!(
-                                "Skill `{}` must exist in the skills directory.",
-                                target
-                            ),
+                            help: format!("Skill `{}` must exist in the skills directory.", target),
                         });
                     }
                 }
@@ -81,6 +78,27 @@ pub fn validate(skills: &[Skill], _all_skills: &[Skill]) -> Vec<Diagnostic> {
     }
 
     diags
+}
+
+/// Tokens that look like skill names but are known exceptions.
+fn is_known_exception(token: &str) -> bool {
+    matches!(
+        token,
+        "story-id" | "capability-slug" | "story-123" | "story-bs01"
+            | "ADR-XXX" | "PROJ-28"
+            | "npm" | "cargo" | "dune" | "coqc"
+            | "test" | "Linear"
+            // Canonical delivery states -- not skills
+            | "in-analysis" | "ready-for-dev" | "in-dev"
+            | "ready-for-deskcheck" | "in-deskcheck"
+            | "ready-for-qa" | "in-qa"
+            | "ready-for-acceptance" | "in-acceptance"
+            | "ready-to-deploy" | "done"
+            | "halted-stall" | "halted-ambiguous"
+            | "halted-human-gate" | "halted-unsafe"
+            | "in-progress"
+    ) || token.ends_with("-agent")
+        || token.starts_with("story-")
 }
 
 #[cfg(test)]
@@ -147,11 +165,7 @@ mod tests {
         let skill_dir = dir.path().join("my-skill");
         std::fs::create_dir(&skill_dir).unwrap();
         std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
-        std::fs::write(
-            skill_dir.join("LOOP.md"),
-            "handoff done to all-agents\n",
-        )
-        .unwrap();
+        std::fs::write(skill_dir.join("LOOP.md"), "handoff done to all-agents\n").unwrap();
 
         let skills = vec![make_skill("my-skill", skill_dir.clone())];
         let diags = validate(&skills, &skills);
@@ -200,25 +214,4 @@ mod tests {
         assert!(is_known_exception("story-abc123")); // starts with story-
         assert!(!is_known_exception("some-real-skill"));
     }
-}
-
-/// Tokens that look like skill names but are known exceptions.
-fn is_known_exception(token: &str) -> bool {
-    matches!(
-        token,
-        "story-id" | "capability-slug" | "story-123" | "story-bs01"
-            | "ADR-XXX" | "PROJ-28"
-            | "npm" | "cargo" | "dune" | "coqc"
-            | "test" | "Linear"
-            // Canonical delivery states -- not skills
-            | "in-analysis" | "ready-for-dev" | "in-dev"
-            | "ready-for-deskcheck" | "in-deskcheck"
-            | "ready-for-qa" | "in-qa"
-            | "ready-for-acceptance" | "in-acceptance"
-            | "ready-to-deploy" | "done"
-            | "halted-stall" | "halted-ambiguous"
-            | "halted-human-gate" | "halted-unsafe"
-            | "in-progress"
-    ) || token.ends_with("-agent")
-        || token.starts_with("story-")
 }
