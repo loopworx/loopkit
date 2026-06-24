@@ -1,11 +1,11 @@
-use loopkit_core::types::{Diagnostic, FileLocation, Severity, Skill};
+use loopkit_core::types::{Config, Diagnostic, FileLocation, Severity, Skill};
 use regex::Regex;
 use std::collections::HashSet;
 
 /// Check that backtick-quoted skill references in README.md and
 /// `handoff <skill> to <agent>` directives in LOOP.md files point to
 /// skills that actually exist.
-pub fn validate(skills: &[Skill], _all_skills: &[Skill]) -> Vec<Diagnostic> {
+pub fn validate(skills: &[Skill], _all_skills: &[Skill], config: &Config) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
     let known_skills: HashSet<&str> = skills.iter().map(|s| s.name.as_str()).collect();
 
@@ -53,7 +53,7 @@ pub fn validate(skills: &[Skill], _all_skills: &[Skill]) -> Vec<Diagnostic> {
         for (line_num, line) in content.lines().enumerate() {
             for cap in backtick_re.captures_iter(line) {
                 let token = &cap[1];
-                if is_known_exception(token) {
+                if is_known_exception(token, config) {
                     continue;
                 }
                 if token.contains('-') && !known_skills.contains(token) {
@@ -81,23 +81,25 @@ pub fn validate(skills: &[Skill], _all_skills: &[Skill]) -> Vec<Diagnostic> {
 }
 
 /// Tokens that look like skill names but are known exceptions.
-fn is_known_exception(token: &str) -> bool {
-    matches!(
-        token,
+fn is_known_exception(token: &str, config: &Config) -> bool {
+    // Generic non-skill tokens
+    if matches!(token,
         "story-id" | "capability-slug" | "story-123" | "story-bs01"
             | "ADR-XXX" | "PROJ-28"
             | "npm" | "cargo" | "dune" | "coqc"
-            | "test" | "Linear"
-            // Canonical delivery states -- not skills
-            | "in-analysis" | "in-dev"
-            | "in-deskcheck"
-            | "in-qa"
-            | "in-acceptance" | "done"
-            | "halted-stall" | "halted-ambiguous"
-            | "halted-human-gate" | "halted-unsafe"
-            | "in-progress"
-    ) || token.ends_with("-agent")
-        || token.starts_with("story-")
+            | "test" | "Linear" | "all-agents" | "in-progress"
+    ) {
+        return true;
+    }
+    // Config-driven: enforced states from .loopkit.yaml
+    if config.enforced_states.iter().any(|s| s.name == token) {
+        return true;
+    }
+    // Config-driven: halted-* states derived from halt_reasons
+    if config.halt_reasons.iter().any(|r| format!("halted-{}", r) == token) {
+        return true;
+    }
+    token.ends_with("-agent") || token.starts_with("story-")
 }
 
 #[cfg(test)]
@@ -121,6 +123,20 @@ mod tests {
         }
     }
 
+    fn test_config() -> Config {
+        let mut config = Config::default();
+        config.enforced_states = vec![
+            loopkit_core::types::EnforcedState { name: "in-analysis".into(), agent: "".into(), description: "".into() },
+            loopkit_core::types::EnforcedState { name: "in-dev".into(), agent: "".into(), description: "".into() },
+            loopkit_core::types::EnforcedState { name: "in-deskcheck".into(), agent: "".into(), description: "".into() },
+            loopkit_core::types::EnforcedState { name: "in-qa".into(), agent: "".into(), description: "".into() },
+            loopkit_core::types::EnforcedState { name: "in-acceptance".into(), agent: "".into(), description: "".into() },
+            loopkit_core::types::EnforcedState { name: "done".into(), agent: "".into(), description: "".into() },
+        ];
+        config.halt_reasons = vec!["stall".into(), "ambiguous".into(), "human-gate".into(), "unsafe".into()];
+        config
+    }
+
     #[test]
     fn loop_md_with_unknown_handoff_skill_warning() {
         let dir = TempDir::new().unwrap();
@@ -134,7 +150,8 @@ mod tests {
         .unwrap();
 
         let skills = vec![make_skill("my-skill", skill_dir.clone())];
-        let diags = validate(&skills, &skills);
+        let config = test_config();
+        let diags = validate(&skills, &skills, &config);
         assert!(diags.iter().any(|d| d.code == "xref-unknown-handoff-skill"));
     }
 
@@ -154,7 +171,8 @@ mod tests {
             make_skill("my-skill", skill_dir.clone()),
             make_skill("known-skill", dir.path().join("known-skill")),
         ];
-        let diags = validate(&skills, &skills);
+        let config = test_config();
+        let diags = validate(&skills, &skills, &config);
         assert!(!diags.iter().any(|d| d.code == "xref-unknown-handoff-skill"));
     }
 
@@ -167,45 +185,52 @@ mod tests {
         std::fs::write(skill_dir.join("LOOP.md"), "handoff done to all-agents\n").unwrap();
 
         let skills = vec![make_skill("my-skill", skill_dir.clone())];
-        let diags = validate(&skills, &skills);
+        let config = test_config();
+        let diags = validate(&skills, &skills, &config);
         assert!(diags.is_empty());
     }
 
     #[test]
     fn no_files_no_diagnostics() {
         let skills: Vec<Skill> = vec![];
-        let diags = validate(&skills, &skills);
+        let config = Config::default();
+        let diags = validate(&skills, &skills, &config);
         assert!(diags.is_empty());
     }
 
     #[test]
     fn known_exceptions_are_recognized() {
-        // Test various known exception tokens
-        assert!(is_known_exception("story-id"));
-        assert!(is_known_exception("capability-slug"));
-        assert!(is_known_exception("story-123"));
-        assert!(is_known_exception("story-bs01"));
-        assert!(is_known_exception("ADR-XXX"));
-        assert!(is_known_exception("PROJ-28"));
-        assert!(is_known_exception("npm"));
-        assert!(is_known_exception("cargo"));
-        assert!(is_known_exception("dune"));
-        assert!(is_known_exception("coqc"));
-        assert!(is_known_exception("test"));
-        assert!(is_known_exception("Linear"));
-        assert!(is_known_exception("in-analysis"));
-        assert!(is_known_exception("in-dev"));
-        assert!(is_known_exception("in-deskcheck"));
-        assert!(is_known_exception("in-qa"));
-        assert!(is_known_exception("in-acceptance"));
-        assert!(is_known_exception("done"));
-        assert!(is_known_exception("halted-stall"));
-        assert!(is_known_exception("halted-ambiguous"));
-        assert!(is_known_exception("halted-human-gate"));
-        assert!(is_known_exception("halted-unsafe"));
-        assert!(is_known_exception("in-progress"));
-        assert!(is_known_exception("some-agent")); // ends with -agent
-        assert!(is_known_exception("story-abc123")); // starts with story-
-        assert!(!is_known_exception("some-real-skill"));
+        let config = test_config();
+        // Generic exceptions
+        assert!(is_known_exception("story-id", &config));
+        assert!(is_known_exception("capability-slug", &config));
+        assert!(is_known_exception("story-123", &config));
+        assert!(is_known_exception("story-bs01", &config));
+        assert!(is_known_exception("ADR-XXX", &config));
+        assert!(is_known_exception("PROJ-28", &config));
+        assert!(is_known_exception("npm", &config));
+        assert!(is_known_exception("cargo", &config));
+        assert!(is_known_exception("dune", &config));
+        assert!(is_known_exception("coqc", &config));
+        assert!(is_known_exception("test", &config));
+        assert!(is_known_exception("Linear", &config));
+        assert!(is_known_exception("all-agents", &config));
+        assert!(is_known_exception("in-progress", &config));
+        // Config-driven: from enforced_states
+        assert!(is_known_exception("in-analysis", &config));
+        assert!(is_known_exception("in-dev", &config));
+        assert!(is_known_exception("in-deskcheck", &config));
+        assert!(is_known_exception("in-qa", &config));
+        assert!(is_known_exception("in-acceptance", &config));
+        assert!(is_known_exception("done", &config));
+        // Config-driven: from halt_reasons
+        assert!(is_known_exception("halted-stall", &config));
+        assert!(is_known_exception("halted-ambiguous", &config));
+        assert!(is_known_exception("halted-human-gate", &config));
+        assert!(is_known_exception("halted-unsafe", &config));
+        // Patterns
+        assert!(is_known_exception("some-agent", &config)); // ends with -agent
+        assert!(is_known_exception("story-abc123", &config)); // starts with story-
+        assert!(!is_known_exception("some-real-skill", &config));
     }
 }

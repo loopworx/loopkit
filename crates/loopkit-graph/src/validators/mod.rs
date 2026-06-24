@@ -61,10 +61,10 @@ pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill], verbos
     run!("enforced_states", enforced_states::validate(&transitions, config));
 
     // Deskcheck pattern
-    run!("deskcheck", deskcheck::validate(&transitions));
+    run!("deskcheck", deskcheck::validate(&transitions, config));
 
     // Bug feedback
-    run!("bug_feedback", bug_feedback::validate(&transitions));
+    run!("bug_feedback", bug_feedback::validate(&transitions, config));
 
     // Loop completeness (skill + loop)
     run!("loop_completeness", loop_completeness::validate(skills, &all_handoffs, config));
@@ -73,7 +73,7 @@ pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill], verbos
     run!("loop_state_files", loop_state_files::validate(root, config));
 
     // Cross references
-    run!("cross_references", cross_references::validate(skills, skills));
+    run!("cross_references", cross_references::validate(skills, skills, config));
 
     // Constraints
     run!("constraints", constraints::validate(&transitions, skills, config));

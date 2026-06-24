@@ -29,7 +29,7 @@ pub fn validate(skills: &[Skill], transitions: &[Transition], config: &Config) -
 
             for alias in &config.state_model_aliases {
                 if let Some(body) = extract_section_body(&content, alias) {
-                    prose_states.extend(extract_prose_states(&body));
+                    prose_states.extend(extract_prose_states(&body, &config.enforced_states));
                 }
             }
 
@@ -74,7 +74,7 @@ pub fn validate(skills: &[Skill], transitions: &[Transition], config: &Config) -
         if let Ok(content) = std::fs::read_to_string(&skill.skill_md) {
             for alias in &config.state_model_aliases {
                 if let Some(body) = extract_section_body(&content, alias) {
-                    for state in extract_prose_states(&body) {
+                    for state in extract_prose_states(&body, &config.enforced_states) {
                         graph_declared.insert(state);
                     }
                 }
@@ -109,7 +109,7 @@ pub fn validate(skills: &[Skill], transitions: &[Transition], config: &Config) -
 
 /// Extract state-like tokens from section body text.
 /// Looks for backtick-quoted words.
-fn extract_prose_states(section_body: &str) -> Vec<String> {
+fn extract_prose_states(section_body: &str, enforced: &[loopkit_core::types::EnforcedState]) -> Vec<String> {
     if section_body.trim().is_empty() {
         return Vec::new();
     }
@@ -123,7 +123,7 @@ fn extract_prose_states(section_body: &str) -> Vec<String> {
         if ch == '`' {
             if in_backtick {
                 let token = &section_body[current_start..i];
-                if is_state_like(token) {
+                if is_state_like(token, enforced) {
                     states.push(token.to_string());
                 }
             }
@@ -170,7 +170,7 @@ mod tests {
     #[test]
     fn extract_prose_states_parses_backtick_states() {
         let body = "state is `in-dev` and then `in-qa`";
-        let states = extract_prose_states(body);
+        let states = extract_prose_states(body, &[]);
         assert_eq!(states.len(), 2);
         assert!(states.contains(&"in-dev".to_string()));
         assert!(states.contains(&"in-qa".to_string()));
@@ -179,19 +179,19 @@ mod tests {
     #[test]
     fn extract_prose_states_filters_non_state_like() {
         let body = "skill is `running-tdd-loops` which is gerund";
-        let states = extract_prose_states(body);
+        let states = extract_prose_states(body, &[]);
         assert!(states.is_empty());
     }
 
     #[test]
     fn extract_prose_states_empty_body() {
-        let states = extract_prose_states("");
+        let states = extract_prose_states("", &[]);
         assert!(states.is_empty());
     }
 
     #[test]
     fn extract_prose_states_whitespace_only() {
-        let states = extract_prose_states("   \n  ");
+        let states = extract_prose_states("   \n  ", &[]);
         assert!(states.is_empty());
     }
 

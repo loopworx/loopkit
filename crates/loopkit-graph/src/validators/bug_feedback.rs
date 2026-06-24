@@ -1,32 +1,50 @@
 use crate::types::Transition;
-use loopkit_core::types::{Diagnostic, Severity, FileLocation};
+use loopkit_core::types::{Config, Diagnostic, Severity, FileLocation};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// Validate bug-feedback transitions:
-/// - in-qa must have a path back to in-dev (bug found during full QA check)
-/// - in-acceptance must have a path back to in-dev (PO/UX finds issues)
-pub fn validate(transitions: &[Transition]) -> Vec<Diagnostic> {
+/// Validate bug-feedback transitions. Fully config-driven.
+/// When disabled (default), returns empty. When enabled, checks:
+/// - qa_state must have a path back to return_to (bug found during QA)
+/// - acceptance_state must have a path back to return_to (PO/UX finds issues)
+pub fn validate(transitions: &[Transition], config: &Config) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
+
+    if !config.bug_feedback_enabled {
+        return diagnostics;
+    }
+
     let adj = build_adjacency_map(transitions);
 
-    if adj.contains_key("in-qa") && !has_edge(&adj, "in-qa", "in-dev") {
+    if !config.bug_feedback_qa_state.is_empty()
+        && adj.contains_key(config.bug_feedback_qa_state.as_str())
+        && !has_edge(&adj, config.bug_feedback_qa_state.as_str(), config.bug_feedback_return_to.as_str())
+    {
         diagnostics.push(Diagnostic {
             severity: Severity::Error,
             code: "state-missing-bug-feedback".to_string(),
-            message: "in-qa must have a transition back to in-dev (bug found — assign back to developer with bug report)".to_string(),
+            message: format!(
+                "{} must have a transition back to {}",
+                config.bug_feedback_qa_state, config.bug_feedback_return_to
+            ),
             location: FileLocation::new(PathBuf::from("skills")),
-            help: "Add: transition in-qa → in-dev".to_string(),
+            help: format!("Add: transition {} → {}", config.bug_feedback_qa_state, config.bug_feedback_return_to),
         });
     }
 
-    if adj.contains_key("in-acceptance") && !has_edge(&adj, "in-acceptance", "in-dev") {
+    if !config.bug_feedback_acceptance_state.is_empty()
+        && adj.contains_key(config.bug_feedback_acceptance_state.as_str())
+        && !has_edge(&adj, config.bug_feedback_acceptance_state.as_str(), config.bug_feedback_return_to.as_str())
+    {
         diagnostics.push(Diagnostic {
             severity: Severity::Error,
             code: "state-missing-bug-feedback".to_string(),
-            message: "in-acceptance must have a transition back to in-dev (PO/UX finds issues — bug report)".to_string(),
+            message: format!(
+                "{} must have a transition back to {}",
+                config.bug_feedback_acceptance_state, config.bug_feedback_return_to
+            ),
             location: FileLocation::new(PathBuf::from("skills")),
-            help: "Add: transition in-acceptance → in-dev".to_string(),
+            help: format!("Add: transition {} → {}", config.bug_feedback_acceptance_state, config.bug_feedback_return_to),
         });
     }
 
@@ -53,33 +71,54 @@ mod tests {
         Transition { from: from.into(), to: to.into(), skill: "test".into(), defined_in: std::path::PathBuf::from("t/LOOP.md") }
     }
 
+    fn test_config() -> Config {
+        Config {
+            bug_feedback_enabled: true,
+            bug_feedback_qa_state: "in-qa".into(),
+            bug_feedback_acceptance_state: "in-acceptance".into(),
+            bug_feedback_return_to: "in-dev".into(),
+            ..Config::default()
+        }
+    }
+
+    #[test]
+    fn disabled_when_not_enabled() {
+        let transitions = vec![t("custom-qa", "custom-done")];
+        let diags = validate(&transitions, &Config::default());
+        assert!(diags.is_empty());
+    }
+
     #[test]
     fn valid_feedback_no_diagnostics() {
+        let config = test_config();
         let transitions = vec![
             t("in-qa", "in-dev"),
             t("in-qa", "in-acceptance"),
             t("in-acceptance", "in-dev"),
             t("in-acceptance", "done"),
         ];
-        assert!(validate(&transitions).is_empty());
+        assert!(validate(&transitions, &config).is_empty());
     }
 
     #[test]
     fn missing_qa_feedback_reports_error() {
+        let config = test_config();
         let transitions = vec![t("in-qa", "in-acceptance")];
-        let diags = validate(&transitions);
+        let diags = validate(&transitions, &config);
         assert!(diags.iter().any(|d| d.code == "state-missing-bug-feedback"));
     }
 
     #[test]
     fn missing_acceptance_feedback_reports_error() {
+        let config = test_config();
         let transitions = vec![t("in-acceptance", "done")];
-        let diags = validate(&transitions);
+        let diags = validate(&transitions, &config);
         assert!(diags.iter().any(|d| d.code == "state-missing-bug-feedback"));
     }
 
     #[test]
     fn no_qa_or_acceptance_no_diagnostics() {
-        assert!(validate(&[t("in-dev", "in-deskcheck")]).is_empty());
+        let config = test_config();
+        assert!(validate(&[t("in-dev", "in-deskcheck")], &config).is_empty());
     }
 }

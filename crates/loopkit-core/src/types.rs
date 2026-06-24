@@ -145,6 +145,28 @@ pub struct Config {
     pub state_model_aliases: Vec<String>,
     #[serde(default = "default_enforced_states")]
     pub enforced_states: Vec<EnforcedState>,
+
+    // Opt-in deskcheck validator
+    #[serde(default)]
+    pub deskcheck_enabled: bool,
+    #[serde(default)]
+    pub deskcheck_state: String,
+    #[serde(default)]
+    pub deskcheck_entry_from: String,
+    #[serde(default)]
+    pub deskcheck_feedback_to: String,
+    #[serde(default)]
+    pub deskcheck_forward_to: String,
+
+    // Opt-in bug feedback validator
+    #[serde(default)]
+    pub bug_feedback_enabled: bool,
+    #[serde(default)]
+    pub bug_feedback_qa_state: String,
+    #[serde(default)]
+    pub bug_feedback_acceptance_state: String,
+    #[serde(default)]
+    pub bug_feedback_return_to: String,
 }
 
 fn default_skills_dir() -> String { "skills/".to_string() }
@@ -191,6 +213,15 @@ impl Default for Config {
             canonical_skill_sections: default_canonical_skill_sections(),
             state_model_aliases: default_state_model_aliases(),
             enforced_states: default_enforced_states(),
+            deskcheck_enabled: false,
+            deskcheck_state: String::new(),
+            deskcheck_entry_from: String::new(),
+            deskcheck_feedback_to: String::new(),
+            deskcheck_forward_to: String::new(),
+            bug_feedback_enabled: false,
+            bug_feedback_qa_state: String::new(),
+            bug_feedback_acceptance_state: String::new(),
+            bug_feedback_return_to: String::new(),
         }
     }
 }
