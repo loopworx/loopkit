@@ -1,0 +1,16 @@
+[package]
+name = "loopkit-core"
+version = "0.3.0"
+edition = "2021"
+
+[dependencies]
+pulldown-cmark = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_yml = "0.0.13"
+regex = "1.10"
+walkdir = "2.5"
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3.10"

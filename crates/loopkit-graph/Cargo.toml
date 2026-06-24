@@ -1,0 +1,12 @@
+[package]
+name = "loopkit-graph"
+version = "0.3.0"
+edition = "2021"
+
+[dependencies]
+loopkit-core = { path = "../loopkit-core" }
+pulldown-cmark = "0.13"
+regex = "1.10"
+
+[dev-dependencies]
+tempfile = "3.10"

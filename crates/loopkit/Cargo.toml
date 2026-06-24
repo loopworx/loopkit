@@ -1,0 +1,18 @@
+[package]
+name = "loopkit"
+version = "0.3.0"
+edition = "2021"
+
+[[bin]]
+name = "loopkit"
+path = "src/main.rs"
+
+[dependencies]
+loopkit-core = { path = "../loopkit-core" }
+loopkit-graph = { path = "../loopkit-graph" }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.10"

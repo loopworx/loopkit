@@ -1,9 +1,0 @@
-# skill-loop-verifier configuration
-# This file is optional. Everything has sensible defaults.
-# Run `skill-loop-verifier init` to create one pre-filled for your project.
-
-# Path to the skills directory (default: auto-discovered or "skills/")
-skills_dir: skills/
-
-# Maximum BFS iterations for reachability checking (default: 20)
-max_iterations: 20
