@@ -151,9 +151,80 @@ pub fn parse_handoff_table(content: &str, skill_name: &str) -> Vec<TransitionRul
     rules
 }
 
-/// Parse all HANDOFFS.md files in the skills directory.
+/// Parse all LOOP.md files for known skills and return LoopContract map.
+/// This is the primary entry point for the validator orchestrator.
+pub fn parse_all_handoffs(
+    skills_dir: &str,
+    skills: &[loopkit_core::types::Skill],
+) -> HashMap<String, crate::types::LoopContract> {
+    let mut result = HashMap::new();
+    let skills_path = Path::new(skills_dir);
+
+    for skill in skills {
+        let loop_md = skill.loop_md();
+        if loop_md.exists() {
+            if let Ok(content) = std::fs::read_to_string(&loop_md) {
+                let rules = parse_transition_rules(&content, &skill.name);
+                if let Some(contract) =
+                    crate::parser::loop_::parse_loop_contract(&loop_md, &skill.name)
+                {
+                    let mut contract = contract;
+                    contract.transitions = rules;
+                    result.insert(skill.name.clone(), contract);
+                    continue;
+                }
+            }
+        }
+
+        let handoffs_md = skill.handoffs_md();
+        if handoffs_md.exists() {
+            if let Ok(content) = std::fs::read_to_string(&handoffs_md) {
+                let rules = parse_handoff_table(&content, &skill.name);
+                if !rules.is_empty() {
+                    let contract = crate::types::LoopContract {
+                        skill: skill.name.clone(),
+                        sections: Vec::new(),
+                        section_order_valid: true,
+                        transitions: rules,
+                        loop_md_path: handoffs_md.clone(),
+                    };
+                    result.insert(skill.name.clone(), contract);
+                }
+            }
+        }
+    }
+
+    // Also discover skills from directory (for backwards compatibility)
+    let (discovered, _) = loopkit_core::discovery::discover_skills(skills_path);
+    for skill in &discovered {
+        if result.contains_key(&skill.name) {
+            continue;
+        }
+        let loop_md = skill.loop_md();
+        if loop_md.exists() {
+            if let Ok(content) = std::fs::read_to_string(&loop_md) {
+                let rules = parse_transition_rules(&content, &skill.name);
+                if let Some(contract) =
+                    crate::parser::loop_::parse_loop_contract(&loop_md, &skill.name)
+                {
+                    let mut contract = contract;
+                    contract.transitions = rules;
+                    if !rules.is_empty() || !contract.sections.is_empty() {
+                        result.insert(skill.name.clone(), contract);
+                    }
+                }
+            }
+        }
+    }
+
+    let _ = skills_path;
+
+    result
+}
+
+/// Parse all HANDOFFS.md files in the skills directory (legacy).
 /// Returns a map of skill name -> transition rules.
-pub fn parse_all_handoffs(skills_dir: &Path) -> HashMap<String, Vec<TransitionRule>> {
+pub fn parse_all_handoffs_legacy(skills_dir: &Path) -> HashMap<String, Vec<TransitionRule>> {
     let mut result = HashMap::new();
     if !skills_dir.exists() {
         return result;
