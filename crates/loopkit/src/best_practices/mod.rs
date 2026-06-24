@@ -10,19 +10,46 @@ pub mod workflow;
 use loopkit_core::types::{Diagnostic, Skill};
 
 /// Run all best-practices checks across all skills.
-pub fn check_all(skills: &[Skill]) -> Vec<Diagnostic> {
+pub fn check_all(skills: &[Skill], verbose: bool) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
-    for skill in skills {
-        diagnostics.extend(frontmatter::check(skill));
-        diagnostics.extend(naming::check(skill));
-        diagnostics.extend(structure::check(skill));
-        diagnostics.extend(progressive::check(skill));
-        diagnostics.extend(terminology::check(skill));
-        diagnostics.extend(workflow::check(skill));
-        diagnostics.extend(anti_patterns::check(skill));
-        diagnostics.extend(scripts::check(skill));
+
+    if verbose {
+        eprintln!("=== best-practices validators ===");
     }
+
+    macro_rules! run_check {
+        ($label:expr, $call:expr) => {{
+            let before = diagnostics.len();
+            for skill in skills {
+                diagnostics.extend($call(skill));
+            }
+            let count = diagnostics.len() - before;
+            if verbose {
+                if count > 0 {
+                    eprintln!("  {:>30}  {} diagnostics", $label, count);
+                } else {
+                    eprintln!("  {:>30}  ✓", $label);
+                }
+            }
+        }};
+    }
+
+    run_check!("frontmatter", frontmatter::check);
+    run_check!("naming", naming::check);
+    run_check!("structure", structure::check);
+    run_check!("progressive", progressive::check);
+    run_check!("terminology", terminology::check);
+    run_check!("workflow", workflow::check);
+    run_check!("anti_patterns", anti_patterns::check);
+    run_check!("scripts", scripts::check);
+
+    let before = diagnostics.len();
     diagnostics.extend(naming::check_consistency(skills));
+    let count = diagnostics.len() - before;
+    if verbose && count > 0 {
+        eprintln!("  {:>30}  {} diagnostics", "naming_consistency", count);
+    }
+
     diagnostics
 }
 
@@ -52,7 +79,7 @@ mod tests {
 
     #[test]
     fn check_all_with_empty_skills_returns_empty() {
-        let diags = check_all(&[]);
+        let diags = check_all(&[], false);
         assert!(diags.is_empty());
     }
 
@@ -68,7 +95,7 @@ mod tests {
         std::fs::write(&md2, "content\n").unwrap();
         let s2 = make_skill("", "", dir2.path().to_path_buf(), md2);
 
-        let diags = check_all(&[s1, s2]);
+        let diags = check_all(&[s1, s2], false);
         let missing_name_count = diags.iter().filter(|d| d.code == "skill-missing-name").count();
         assert_eq!(missing_name_count, 2);
     }
@@ -95,7 +122,7 @@ mod tests {
             md2.clone(),
         );
 
-        let diags = check_all(&[s1, s2]);
+        let diags = check_all(&[s1, s2], false);
         assert!(diags.iter().any(|d| d.code == "skill-naming-inconsistent"));
     }
 }

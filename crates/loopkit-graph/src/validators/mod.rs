@@ -14,52 +14,69 @@ use crate::graph::build_transitions;
 use crate::parser::handoff::parse_all_handoffs;
 use crate::simulation;
 use crate::types::{LoopContract, Transition};
-use loopkit_core::types::{Config, Diagnostic, Skill};
+use loopkit_core::types::{Config, Diagnostic, Severity, Skill};
 use std::collections::HashMap;
 
 /// Run all validators and return unified diagnostics.
-pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill]) -> Vec<Diagnostic> {
+pub fn run_all(root: &std::path::Path, config: &Config, skills: &[Skill], verbose: bool) -> Vec<Diagnostic> {
     let all_handoffs: HashMap<String, LoopContract> =
         parse_all_handoffs(&config.skills_dir, skills);
     let transitions: Vec<Transition> = build_transitions(skills, &all_handoffs);
 
     let mut diagnostics = Vec::new();
 
+    macro_rules! run {
+        ($label:expr, $call:expr) => {{
+            let diags = $call;
+            if verbose {
+                let e = diags.iter().filter(|d| d.severity == Severity::Error).count();
+                let w = diags.iter().filter(|d| d.severity == Severity::Warning).count();
+                let i = diags.iter().filter(|d| d.severity == Severity::Info).count();
+                if e + w + i > 0 {
+                    eprintln!("  {:>30}  {}E  {}W  {}I", $label, e, w, i);
+                } else {
+                    eprintln!("  {:>30}  ✓", $label);
+                }
+            }
+            diagnostics.extend(diags);
+        }};
+    }
+
     // Graph validators
-    diagnostics.extend(graph::validate(&transitions));
+    run!("graph", graph::validate(&transitions));
 
     // Simulation
-    diagnostics.extend(simulation::run_all(&transitions, config.max_iterations));
+    run!("simulation", simulation::run_all(&transitions, config.max_iterations));
 
     // Loop language
-    diagnostics.extend(loop_language::validate(skills, &all_handoffs, config));
+    run!("loop_language", loop_language::validate(skills, &all_handoffs, config));
 
     // Loop sections
-    diagnostics.extend(loop_sections::validate(skills, &all_handoffs, config));
+    run!("loop_sections", loop_sections::validate(skills, &all_handoffs, config));
 
     // State consistency (forward + reverse)
-    diagnostics.extend(state_consistency::validate(skills, &transitions, config));
+    run!("state_consistency", state_consistency::validate(skills, &transitions, config));
 
-    // Enforced states (stub -- Task 2.5)
-    diagnostics.extend(enforced_states::validate(&transitions, config));
+    // Enforced states
+    run!("enforced_states", enforced_states::validate(&transitions, config));
 
-    // Deskcheck pattern (stub -- Task 2.6)
-    diagnostics.extend(deskcheck::validate(&transitions));
+    // Deskcheck pattern
+    run!("deskcheck", deskcheck::validate(&transitions));
 
-    // Bug feedback (stub -- Task 2.7)
-    diagnostics.extend(bug_feedback::validate(&transitions));
+    // Bug feedback
+    run!("bug_feedback", bug_feedback::validate(&transitions));
 
     // Loop completeness (skill + loop)
-    diagnostics.extend(loop_completeness::validate(skills, &all_handoffs, config));
+    run!("loop_completeness", loop_completeness::validate(skills, &all_handoffs, config));
 
     // Loop state files
-    diagnostics.extend(loop_state_files::validate(root, config));
+    run!("loop_state_files", loop_state_files::validate(root, config));
 
     // Cross references
-    diagnostics.extend(cross_references::validate(skills, skills));
+    run!("cross_references", cross_references::validate(skills, skills));
 
     // Constraints
-    diagnostics.extend(constraints::validate(&transitions, skills, config));
+    run!("constraints", constraints::validate(&transitions, skills, config));
 
     diagnostics
 }
@@ -89,7 +106,7 @@ mod tests {
     fn run_all_with_empty_skills_produces_diagnostics() {
         let config = Config::default();
         let root = std::path::PathBuf::from(".");
-        let diags = run_all(&root, &config, &[]);
+        let diags = run_all(&root, &config, &[], false);
         // With empty skills, we expect diagnostics from:
         // - enforced_states (all missing)
         // - constraints (empty graph)
@@ -112,7 +129,7 @@ mod tests {
         let mut config = Config::default();
         config.skills_dir = dir.path().to_string_lossy().to_string();
 
-        let diags = run_all(dir.path(), &config, &skills);
+        let diags = run_all(dir.path(), &config, &skills, false);
         // Just verify it returns diagnostics (will have some from various validators)
         assert!(!diags.is_empty());
         let _: &Vec<Diagnostic> = &diags;

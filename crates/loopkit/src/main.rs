@@ -17,6 +17,10 @@ struct Cli {
     /// Output JSON instead of text
     #[arg(long)]
     json: bool,
+
+    /// Print per-validator diagnostic counts
+    #[arg(long, short)]
+    verbose: bool,
 }
 
 fn main() {
@@ -26,15 +30,44 @@ fn main() {
     let skills_dir = cli.path.join(&config.skills_dir);
 
     let (skills, discovery_diags) = discover_skills(&skills_dir);
-    let mut diagnostics = discovery_diags;
+    let mut diagnostics = discovery_diags.clone();
 
-    diagnostics.extend(validators::run_all(&cli.path, &config, &skills));
-    diagnostics.extend(loopkit::best_practices::check_all(&skills));
+    if cli.verbose {
+        eprintln!("=== loopkit v0.3.0 ===");
+        eprintln!("root: {}", cli.path.display());
+        eprintln!("skills_dir: {}", skills_dir.display());
+        eprintln!("skills discovered: {}", skills.len());
+        if !discovery_diags.is_empty() {
+            eprintln!("  discovery errors: {}", discovery_diags.len());
+        }
+        eprintln!();
+    }
+
+    diagnostics.extend(validators::run_all(&cli.path, &config, &skills, cli.verbose));
+    diagnostics.extend(loopkit::best_practices::check_all(&skills, cli.verbose));
 
     let error_count = diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
         .count();
+    let warning_count = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Warning)
+        .count();
+    let info_count = diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Info)
+        .count();
+
+    if cli.verbose {
+        eprintln!();
+        eprintln!("=== diagnostics summary ===");
+        eprintln!("  total: {}", diagnostics.len());
+        eprintln!("  errors: {}", error_count);
+        eprintln!("  warnings: {}", warning_count);
+        eprintln!("  info: {}", info_count);
+        eprintln!();
+    }
 
     if cli.json {
         println!("{}", diagnostics_json(&diagnostics, skills.len()));

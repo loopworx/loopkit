@@ -14,8 +14,8 @@ fn run_fixture() -> (Vec<loopkit_core::types::Diagnostic>, usize) {
     let (skills, discovery_diags) = loopkit_core::discovery::discover_skills(&skills_dir);
 
     let mut all_diags = discovery_diags;
-    all_diags.extend(loopkit_graph::validators::run_all(&root, &config, &skills));
-    all_diags.extend(loopkit::best_practices::check_all(&skills));
+    all_diags.extend(loopkit_graph::validators::run_all(&root, &config, &skills, false));
+    all_diags.extend(loopkit::best_practices::check_all(&skills, false));
 
     (all_diags, skills.len())
 }
