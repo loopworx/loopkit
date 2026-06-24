@@ -35,7 +35,7 @@ pub fn validate(transitions: &[Transition], config: &Config) -> Vec<Diagnostic> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use loopkit_core::types::Config;
+    use loopkit_core::types::{Config, EnforcedState};
 
     fn make_transition(from: &str, to: &str) -> Transition {
         Transition {
@@ -46,9 +46,20 @@ mod tests {
         }
     }
 
+    fn test_config() -> Config {
+        let mut config = Config::default();
+        config.enforced_states = vec![
+            EnforcedState { name: "in-dev".into(), agent: "developer".into(), description: "".into() },
+            EnforcedState { name: "in-qa".into(), agent: "qa-agent".into(), description: "".into() },
+            EnforcedState { name: "done".into(), agent: "".into(), description: "".into() },
+            EnforcedState { name: "halted-stall".into(), agent: "".into(), description: "".into() },
+        ];
+        config
+    }
+
     #[test]
     fn all_enforced_states_present_no_diagnostics() {
-        let config = Config::default();
+        let config = test_config();
         let transitions: Vec<Transition> = config
             .enforced_states
             .iter()
@@ -56,16 +67,12 @@ mod tests {
             .collect();
 
         let diags = validate(&transitions, &config);
-        assert!(
-            diags.is_empty(),
-            "Expected no diagnostics but got: {:?}",
-            diags
-        );
+        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
     }
 
     #[test]
     fn missing_enforced_state_emits_error() {
-        let config = Config::default();
+        let config = test_config();
         let transitions = vec![make_transition("in-dev", "in-qa")];
         let diags = validate(&transitions, &config);
         assert!(!diags.is_empty());
@@ -75,7 +82,7 @@ mod tests {
 
     #[test]
     fn empty_transitions_reports_all_missing() {
-        let config = Config::default();
+        let config = test_config();
         let transitions = vec![];
         let diags = validate(&transitions, &config);
         assert_eq!(diags.len(), config.enforced_states.len());

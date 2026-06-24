@@ -1,2 +1,31 @@
 skills_dir: skills/
 max_iterations: 20
+
+enforced_states:
+  - name: in-dev
+    agent: developer
+    description: Developer builds story AC by AC
+  - name: in-deskcheck
+    agent: qa-agent
+    description: QA reviews each AC
+  - name: in-qa
+    agent: qa-agent
+    description: Full QA check
+  - name: in-acceptance
+    agent: po-agent
+    description: PO verifies delivered story
+  - name: done
+    agent: ""
+    description: Story deployed and verified
+  - name: halted-stall
+    agent: ""
+    description: No progress for N iterations
+  - name: halted-ambiguous
+    agent: ""
+    description: Ambiguous state
+  - name: halted-human-gate
+    agent: ""
+    description: Requires human intervention
+  - name: halted-unsafe
+    agent: ""
+    description: Unsafe condition

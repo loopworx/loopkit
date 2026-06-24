@@ -177,25 +177,7 @@ fn default_state_model_aliases() -> Vec<String> {
 }
 
 fn default_enforced_states() -> Vec<EnforcedState> {
-    vec![
-        EnforcedState { name: "backlog".into(), agent: "coordinator".into(),
-            description: "Picks stories from Linear/Jira/Trello, assigns to PO by priority and dependency".into() },
-        EnforcedState { name: "in-analysis".into(), agent: "po-agent".into(),
-            description: "Makes story development-ready".into() },
-        EnforcedState { name: "in-dev".into(), agent: "developer".into(),
-            description: "Builds story AC by AC, requests deskcheck from QA per AC".into() },
-        EnforcedState { name: "in-deskcheck".into(), agent: "qa-agent".into(),
-            description: "Reviews each AC; returns bug report or marks AC approved".into() },
-        EnforcedState { name: "in-qa".into(), agent: "qa-agent".into(),
-            description: "Full AC check; if clean → assigns to po + ux; if bug → assigns to developer".into() },
-        EnforcedState { name: "in-acceptance".into(), agent: "po-agent, ux-agent".into(),
-            description: "Both independently check all ACs".into() },
-        EnforcedState { name: "done".into(), agent: "".into(),
-            description: "Story deployed to production and verified".into() },
-        EnforcedState { name: "halted-stall".into(), agent: "".into(), description: "".into() },
-        EnforcedState { name: "halted-human-gate".into(), agent: "".into(), description: "".into() },
-        EnforcedState { name: "halted-unsafe".into(), agent: "".into(), description: "".into() },
-    ]
+    vec![]
 }
 
 impl Default for Config {
