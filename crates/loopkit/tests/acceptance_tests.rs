@@ -297,7 +297,7 @@ fn enforced_state_check_runs() {
         .map(|d| d.message.as_str())
         .collect();
     // With only 2 skills covering in-dev through done (happy path), some enforced
-    // states like backlog, ready-for-deploy, halted-* will be missing.
+    // states like backlog, halted-* will be missing.
     assert!(
         !enforced_missing.is_empty(),
         "should report some enforced states as missing"

@@ -59,7 +59,7 @@ mod tests {
             t("in-qa", "in-dev"),
             t("in-qa", "in-acceptance"),
             t("in-acceptance", "in-dev"),
-            t("in-acceptance", "ready-for-deploy"),
+            t("in-acceptance", "done"),
         ];
         assert!(validate(&transitions).is_empty());
     }
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn missing_acceptance_feedback_reports_error() {
-        let transitions = vec![t("in-acceptance", "ready-for-deploy")];
+        let transitions = vec![t("in-acceptance", "done")];
         let diags = validate(&transitions);
         assert!(diags.iter().any(|d| d.code == "state-missing-bug-feedback"));
     }

@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn valid_state_names() {
         assert!(validate_state_name("in-dev").is_ok());
-        assert!(validate_state_name("ready-for-qa").is_ok());
+        assert!(validate_state_name("in-qa").is_ok());
         assert!(validate_state_name("halted-stall").is_ok());
         assert!(validate_state_name("done").is_ok());
         assert!(validate_state_name("in-deskcheck").is_ok());

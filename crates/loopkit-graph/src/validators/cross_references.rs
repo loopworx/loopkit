@@ -89,11 +89,10 @@ fn is_known_exception(token: &str) -> bool {
             | "npm" | "cargo" | "dune" | "coqc"
             | "test" | "Linear"
             // Canonical delivery states -- not skills
-            | "in-analysis" | "ready-for-dev" | "in-dev"
-            | "ready-for-deskcheck" | "in-deskcheck"
-            | "ready-for-qa" | "in-qa"
-            | "ready-for-acceptance" | "in-acceptance"
-            | "ready-to-deploy" | "done"
+            | "in-analysis" | "in-dev"
+            | "in-deskcheck"
+            | "in-qa"
+            | "in-acceptance" | "done"
             | "halted-stall" | "halted-ambiguous"
             | "halted-human-gate" | "halted-unsafe"
             | "in-progress"
@@ -195,15 +194,10 @@ mod tests {
         assert!(is_known_exception("test"));
         assert!(is_known_exception("Linear"));
         assert!(is_known_exception("in-analysis"));
-        assert!(is_known_exception("ready-for-dev"));
         assert!(is_known_exception("in-dev"));
-        assert!(is_known_exception("ready-for-deskcheck"));
         assert!(is_known_exception("in-deskcheck"));
-        assert!(is_known_exception("ready-for-qa"));
         assert!(is_known_exception("in-qa"));
-        assert!(is_known_exception("ready-for-acceptance"));
         assert!(is_known_exception("in-acceptance"));
-        assert!(is_known_exception("ready-to-deploy"));
         assert!(is_known_exception("done"));
         assert!(is_known_exception("halted-stall"));
         assert!(is_known_exception("halted-ambiguous"));

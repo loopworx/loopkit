@@ -292,14 +292,14 @@ mod tests {
         let content = "\
 ## State Transition Rule
 
-transition in-dev → ready-for-deskcheck
+transition in-dev → in-deskcheck
   trigger all acceptance tests green
   handoff running-desk-checks to qa-agent
 ";
         let rules = parse_transition_rules(content, "test-skill");
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].from, "in-dev");
-        assert_eq!(rules[0].to, "ready-for-deskcheck");
+        assert_eq!(rules[0].to, "in-deskcheck");
         assert_eq!(rules[0].trigger.as_deref(), Some("all acceptance tests green"));
         assert_eq!(rules[0].handoff_target.as_deref(), Some("running-desk-checks"));
         assert_eq!(rules[0].handoff_agent.as_deref(), Some("qa-agent"));
@@ -326,11 +326,11 @@ transition in-dev → halted-stall
         let content = "\
 ## State Transition Rule
 
-transition in-dev → ready-for-deskcheck
+transition in-dev → in-deskcheck
   trigger all-ACs-green
   handoff running-desk-checks to qa-agent
 
-transition in-dev → ready-for-qa
+transition in-dev → in-qa
   trigger manual-QA-pull
   handoff running-regression-suite to qa-agent
 
@@ -346,13 +346,13 @@ transition in-dev → halted-stall
         let content = "\
 ## State Transition Rule
 
-transition in-dev -> ready-for-deskcheck
+transition in-dev -> in-deskcheck
   trigger all-ACs-green
 ";
         let rules = parse_transition_rules(content, "test-skill");
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].from, "in-dev");
-        assert_eq!(rules[0].to, "ready-for-deskcheck");
+        assert_eq!(rules[0].to, "in-deskcheck");
     }
 
     #[test]
@@ -360,13 +360,13 @@ transition in-dev -> ready-for-deskcheck
         let content = "\
 ## State Transition Rule
 
-transition in-dev ---> ready-for-deskcheck
+transition in-dev ---> in-deskcheck
   trigger all-ACs-green
 ";
         let rules = parse_transition_rules(content, "test-skill");
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].from, "in-dev");
-        assert_eq!(rules[0].to, "ready-for-deskcheck");
+        assert_eq!(rules[0].to, "in-deskcheck");
     }
 
     #[test]
@@ -374,13 +374,13 @@ transition in-dev ---> ready-for-deskcheck
         let content = "\
 ## State Transition Rule
 
-transition `in-dev` → `ready-for-deskcheck`
+transition `in-dev` → `in-deskcheck`
   trigger all-ACs-green
 ";
         let rules = parse_transition_rules(content, "test-skill");
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].from, "in-dev");
-        assert_eq!(rules[0].to, "ready-for-deskcheck");
+        assert_eq!(rules[0].to, "in-deskcheck");
     }
 
     #[test]

@@ -116,7 +116,7 @@ mod tests {
             &loop_path,
             "\
 ## Entry Conditions
-Story is ready-for-dev
+Story is in-dev
 
 ## Loop State Schema
 | field | type |
@@ -131,7 +131,7 @@ Story is ready-for-dev
 `cargo test`
 
 ## State Transition Rule
-transition in-dev → ready-for-deskcheck
+transition in-dev → in-deskcheck
   trigger all-ACs-green
 
 ## Halt Conditions
