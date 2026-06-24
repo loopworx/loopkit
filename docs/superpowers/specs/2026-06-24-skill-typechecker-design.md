@@ -120,6 +120,8 @@ enforced_states:
   - in-analysis
   - ready-for-dev
   - in-dev
+  - ready-for-deskcheck
+  - in-deskcheck
   - ready-for-qa
   - in-qa
   - ready-for-acceptance
@@ -132,7 +134,7 @@ enforced_states:
 
 ### 3.2 Deskcheck — conditional sub-pattern
 
-Deskcheck states (`ready-for-deskcheck`, `in-deskcheck`) are NOT in the enforced list. If they appear in any transition or State Model, the verifier enforces the full deskcheck subgraph:
+Deskcheck states (`ready-for-deskcheck`, `in-deskcheck`) are in the enforced list. They represent the developer→QA feedback loop within `in-dev`. The verifier enforces the full deskcheck subgraph:
 
 ```
 in-dev → ready-for-deskcheck → in-deskcheck → (in-dev | ready-for-qa)
