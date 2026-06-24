@@ -2,6 +2,7 @@ pub mod anti_patterns;
 pub mod frontmatter;
 pub mod naming;
 pub mod progressive;
+pub mod scripts;
 pub mod structure;
 pub mod terminology;
 pub mod workflow;
@@ -19,6 +20,7 @@ pub fn check_all(skills: &[Skill]) -> Vec<Diagnostic> {
         diagnostics.extend(terminology::check(skill));
         diagnostics.extend(workflow::check(skill));
         diagnostics.extend(anti_patterns::check(skill));
+        diagnostics.extend(scripts::check(skill));
     }
     diagnostics.extend(naming::check_consistency(skills));
     diagnostics

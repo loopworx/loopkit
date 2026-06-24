@@ -27,6 +27,10 @@ pub fn parse_frontmatter(content: &str) -> (HashMap<String, String>, usize) {
                 if trimmed.is_empty() || trimmed.starts_with('#') {
                     continue;
                 }
+                // Skip indented lines: they are sub-keys of a parent mapping (e.g., metadata:)
+                if line.starts_with(' ') || line.starts_with('\t') {
+                    continue;
+                }
                 if let Some((k, v)) = trimmed.split_once(':') {
                     let key = k.trim().to_string();
                     let val = v.trim().trim_matches('"').trim_matches('\'').to_string();

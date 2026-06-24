@@ -156,6 +156,75 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         }
     }
 
+    // Optional frontmatter fields: compatibility, license, metadata, allowed-tools
+    // Parse raw frontmatter to check these fields
+    let raw_frontmatter = {
+        if let Ok(c) = std::fs::read_to_string(&path) {
+            let (fm, _) = loopkit_core::parser::skill::parse_frontmatter(&c);
+            fm
+        } else {
+            return diags;
+        }
+    };
+
+    // Validate compatibility length (max 500 chars)
+    if let Some(compat) = raw_frontmatter.get("compatibility") {
+        if compat.len() > 500 {
+            let line = find_yaml_line("compatibility");
+            let mut diag = Diagnostic::error(
+                "skill-compatibility-too-long",
+                format!(
+                    "compatibility field exceeds 500 characters ({} chars)",
+                    compat.len()
+                ),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+    }
+
+    // Validate allowed-tools is space-separated if present
+    if let Some(tools) = raw_frontmatter.get("allowed-tools") {
+        if tools.contains(',') {
+            let line = find_yaml_line("allowed-tools");
+            let mut diag = Diagnostic::warning(
+                "skill-allowed-tools-format",
+                "allowed-tools should be space-separated, not comma-separated".into(),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+    }
+
+    // Check for unknown frontmatter keys (beyond spec + common extensions)
+    let known_keys: &[&str] = &[
+        "name", "description", "license", "compatibility", "metadata",
+        "allowed-tools", "level", "owner", "trigger",
+    ];
+    for key in raw_frontmatter.keys() {
+        if !known_keys.contains(&key.as_str()) && !key.starts_with("x-") {
+            let line = find_yaml_line(key);
+            let mut diag = Diagnostic::warning(
+                "skill-unknown-frontmatter-key",
+                format!(
+                    "Unknown frontmatter key '{}'. Use only spec-defined keys or prefix custom keys with 'x-'",
+                    key
+                ),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+    }
+
     diags
 }
 

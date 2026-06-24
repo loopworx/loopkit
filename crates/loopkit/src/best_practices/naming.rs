@@ -16,6 +16,79 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     };
 
     if !skill.name.is_empty() {
+        // Check parent directory name matches skill name
+        let dir_name = skill
+            .path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if !dir_name.is_empty() && skill.name != dir_name {
+            let line = find_name_line();
+            let mut diag = Diagnostic::error(
+                "skill-name-mismatch-dir",
+                format!(
+                    "name '{}' does not match parent directory '{}'. The name field must match the directory name",
+                    skill.name, dir_name
+                ),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+
+        // No leading hyphen
+        if skill.name.starts_with('-') {
+            let line = find_name_line();
+            let mut diag = Diagnostic::error(
+                "skill-name-leading-hyphen",
+                format!(
+                    "name '{}' starts with a hyphen. Names must not start with a hyphen",
+                    skill.name
+                ),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+
+        // No trailing hyphen
+        if skill.name.ends_with('-') {
+            let line = find_name_line();
+            let mut diag = Diagnostic::error(
+                "skill-name-trailing-hyphen",
+                format!(
+                    "name '{}' ends with a hyphen. Names must not end with a hyphen",
+                    skill.name
+                ),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+
+        // No consecutive hyphens
+        if skill.name.contains("--") {
+            let line = find_name_line();
+            let mut diag = Diagnostic::error(
+                "skill-name-consecutive-hyphens",
+                format!(
+                    "name '{}' contains consecutive hyphens. Names must not contain '--'",
+                    skill.name
+                ),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
+
         let first_word = skill.name.split('-').next().unwrap_or("");
         if !first_word.ends_with("ing") {
             let line = find_name_line();
