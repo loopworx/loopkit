@@ -116,49 +116,66 @@ state_model_aliases:
   - States
 
 enforced_states:
-  - backlog
-  - in-analysis
-  - ready-for-dev
-  - in-dev
-  - ready-for-deskcheck
-  - in-deskcheck
-  - ready-for-qa
-  - in-qa
-  - ready-for-acceptance
-  - in-acceptance
-  - ready-to-deploy
-  - halted-stall
-  - halted-human-gate
-  - halted-unsafe
+  - backlog:           coordinator  # picks from Linear/Jira/Trello, assigns to PO agent by priority + dependency
+  - in-analysis:       po-agent     # makes story ready for development
+  - in-dev:            developer    # builds story AC by AC, requests deskcheck per AC
+  - in-deskcheck:      qa-agent     # reviews each AC, returns bug report or approves AC
+  - in-qa:             qa-agent     # full AC check; if clean → assigns to po + ux; if bug → assigns to developer
+  - in-acceptance:     po-agent, ux-agent  # both independently check all ACs
+  - ready-for-deploy:  human        # manual approval gate
+  - done:                           # story moved to done in Linear/Jira/Trello
+  - halted-stall:
+  - halted-human-gate:
+  - halted-unsafe:
 ```
 
-### 3.2 Deskcheck — conditional sub-pattern
+### 3.2 Deskcheck — developer↔QA feedback loop
 
-Deskcheck states (`ready-for-deskcheck`, `in-deskcheck`) are in the enforced list. They represent the developer→QA feedback loop within `in-dev`. The verifier enforces the full deskcheck subgraph:
+`in-deskcheck` is an enforced state. The verifier enforces this subgraph pattern:
 
 ```
-in-dev → ready-for-deskcheck → in-deskcheck → (in-dev | ready-for-qa)
+in-dev → in-deskcheck → (in-dev | in-qa)
 ```
 
-Required exits:
-
-| Condition | Required transition |
+| Rule | Required transition |
 |---|---|
-| `ready-for-deskcheck` exists | Must have `→ in-deskcheck` |
-| `in-deskcheck` exists | Must have `→ in-dev` (feedback loop) |
-| `in-deskcheck` exists | Must have `→ ready-for-qa` (completion path) |
+| `in-dev` → `in-deskcheck` | Developer asks QA to review one AC |
+| `in-deskcheck` → `in-dev` | QA finds bug → back to developer with bug report |
+| `in-deskcheck` → `in-dev` | Still more ACs to check → QA re-assigns to developer |
+| `in-deskcheck` → `in-qa` | All ACs finalized (finalized AC == total AC) → QA takes ownership for full check |
 
 ### 3.3 Bug-feedback transitions
 
-Bug severity determines the feedback destination:
+Bugs found after `in-dev` return to `in-dev` with a separate bug report. The verifier enforces these required exits:
 
-| Bug found in | Goes back to | Diagnostic if missing |
+| Bug found in | Must have path to | Responsible agent |
 |---|---|---|
-| `in-deskcheck` | `in-dev` | `state-missing-deskcheck-feedback` |
-| `in-qa` | `ready-for-dev` | `state-missing-bug-feedback` |
-| `in-acceptance` | `ready-for-dev` | `state-missing-bug-feedback` |
+| `in-deskcheck` | `in-dev` | qa-agent → developer |
+| `in-qa` | `in-dev` | qa-agent → developer (with bug report) |
+| `in-acceptance` | `in-dev` | po-agent / ux-agent → developer (with bug report) |
 
-`in-qa` and `in-acceptance` must each have a path to `ready-for-dev`. This represents the formal bug-report flow: a bug found in QA or acceptance gets a separate bug report and re-enters the backlog queue at `ready-for-dev`.
+Each of these states must have an outbound transition back to `in-dev`. Missing this path = Error.
+
+### 3.4 Forward flow
+
+The happy path through the enforced states:
+
+```
+backlog → in-analysis → in-dev → in-deskcheck → in-qa → in-acceptance → ready-for-deploy → done
+```
+
+Agent assignments:
+
+| State | Agent(s) | Action |
+|---|---|---|
+| `backlog` | coordinator | Picks stories from Linear/Jira/Trello, assigns to PO by priority and dependency |
+| `in-analysis` | po-agent | Makes the story development-ready, then assigns to developer |
+| `in-dev` | developer | Builds AC by AC, requests deskcheck from QA per AC |
+| `in-deskcheck` | qa-agent | Reviews each AC; returns bug report or marks AC approved |
+| `in-qa` | qa-agent | Full AC check; if clean → assigns to po + ux; if bug → assigns to developer |
+| `in-acceptance` | po-agent, ux-agent | Both independently check all ACs |
+| `ready-for-deploy` | human | Manual approval gate; once approved, deployed |
+| `done` | (none) | Story moved to done in Linear/Jira/Trello |
 
 ### 3.4 Configuration merge
 
