@@ -79,3 +79,187 @@ pub fn validate(
 
     diags
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    fn make_skill(name: &str, path: PathBuf) -> Skill {
+        let skill_md = path.join("SKILL.md");
+        Skill {
+            name: name.into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path,
+            skill_md,
+            sections: vec![],
+            states: vec![],
+        }
+    }
+
+    #[test]
+    fn valid_loop_md_no_errors() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## Entry Conditions
+foo
+
+## Loop State Schema
+bar
+
+## Single Iteration Step
+baz
+
+## Proof of Progress
+qux
+
+## State Transition Rule
+transition a → b
+
+## Halt Conditions
+halt stall
+
+## Handoff Target
+handoff x to y
+",
+        )
+        .unwrap();
+
+        let skills = vec![make_skill("test-skill", skill_dir)];
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let config = Config::default();
+        let diags = validate(&skills, &all_handoffs, &config);
+        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
+    }
+
+    #[test]
+    fn missing_sections_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## Entry Conditions
+foo
+
+## Loop State Schema
+bar
+",
+        )
+        .unwrap();
+
+        let skills = vec![make_skill("test-skill", skill_dir)];
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let config = Config::default();
+        let diags = validate(&skills, &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "loop-missing-section"));
+    }
+
+    #[test]
+    fn wrong_section_order_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## Halt Conditions
+halt stall
+
+## Entry Conditions
+foo
+
+## Loop State Schema
+bar
+
+## Single Iteration Step
+baz
+
+## Proof of Progress
+qux
+
+## State Transition Rule
+transition a → b
+
+## Handoff Target
+handoff x to y
+",
+        )
+        .unwrap();
+
+        let skills = vec![make_skill("test-skill", skill_dir)];
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let config = Config::default();
+        let diags = validate(&skills, &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "loop-section-order"));
+    }
+
+    #[test]
+    fn unknown_section_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## Entry Conditions
+foo
+
+## Loop State Schema
+bar
+
+## Single Iteration Step
+baz
+
+## Proof of Progress
+qux
+
+## State Transition Rule
+transition a → b
+
+## Halt Conditions
+halt stall
+
+## Handoff Target
+handoff x to y
+
+## My Custom Section
+nobody expects this
+",
+        )
+        .unwrap();
+
+        let skills = vec![make_skill("test-skill", skill_dir)];
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let config = Config::default();
+        let diags = validate(&skills, &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "loop-unknown-section"));
+    }
+
+    #[test]
+    fn no_loop_md_no_diagnostics() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+
+        let skills = vec![make_skill("test-skill", skill_dir)];
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let config = Config::default();
+        let diags = validate(&skills, &all_handoffs, &config);
+        assert!(diags.is_empty());
+    }
+}

@@ -30,6 +30,11 @@ impl FileLocation {
             column: Some(column),
         }
     }
+
+    pub fn at_line(mut self, line: u32) -> Self {
+        self.line = Some(line);
+        self
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

@@ -54,3 +54,65 @@ pub fn validate(transitions: &[Transition], skills: &[Skill], _config: &Config) 
 
     diags
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn t(from: &str, to: &str) -> Transition {
+        Transition {
+            from: from.into(),
+            to: to.into(),
+            skill: "s".into(),
+            defined_in: PathBuf::from("x"),
+        }
+    }
+
+    fn make_skill(name: &str) -> Skill {
+        Skill {
+            name: name.into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path: PathBuf::from("skills").join(name),
+            skill_md: PathBuf::from("skills").join(name).join("SKILL.md"),
+            sections: vec![],
+            states: vec![],
+        }
+    }
+
+    #[test]
+    fn empty_transitions_emits_error() {
+        let config = Config::default();
+        let diags = validate(&[], &[], &config);
+        assert!(diags.iter().any(|d| d.code == "constraints-empty-graph"));
+    }
+
+    #[test]
+    fn unknown_gerund_handoff_target_emits_error() {
+        let config = Config::default();
+        let skills = vec![make_skill("my-skill")];
+        let transitions = vec![t("a", "running-desk-checks")];
+        let diags = validate(&transitions, &skills, &config);
+        assert!(diags.iter().any(|d| d.code == "constraints-unknown-handoff-target"));
+    }
+
+    #[test]
+    fn valid_transitions_no_diagnostics() {
+        let config = Config::default();
+        let skills = vec![make_skill("my-skill")];
+        let transitions = vec![t("in-dev", "in-qa")];
+        let diags = validate(&transitions, &skills, &config);
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn transitions_to_known_skill_no_error() {
+        let config = Config::default();
+        let skills = vec![make_skill("running-desk-checks"), make_skill("my-skill")];
+        let transitions = vec![t("a", "running-desk-checks")];
+        let diags = validate(&transitions, &skills, &config);
+        assert!(diags.iter().all(|d| d.code != "constraints-unknown-handoff-target"));
+    }
+}

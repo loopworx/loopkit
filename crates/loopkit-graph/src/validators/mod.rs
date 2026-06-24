@@ -10,7 +10,7 @@ pub mod loop_sections;
 pub mod loop_state_files;
 pub mod state_consistency;
 
-use crate::graph;
+use crate::graph::build_transitions;
 use crate::parser::handoff::parse_all_handoffs;
 use crate::simulation;
 use crate::types::{LoopContract, Transition};
@@ -21,7 +21,7 @@ use std::collections::HashMap;
 pub fn run_all(config: &Config, skills: &[Skill]) -> Vec<Diagnostic> {
     let all_handoffs: HashMap<String, LoopContract> =
         parse_all_handoffs(&config.skills_dir, skills);
-    let transitions: Vec<Transition> = graph::build_transitions(skills, &all_handoffs);
+    let transitions: Vec<Transition> = build_transitions(skills, &all_handoffs);
 
     let mut diagnostics = Vec::new();
 
@@ -62,4 +62,58 @@ pub fn run_all(config: &Config, skills: &[Skill]) -> Vec<Diagnostic> {
     diagnostics.extend(constraints::validate(&transitions, skills, config));
 
     diagnostics
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    fn make_skill(name: &str, path: PathBuf) -> Skill {
+        let skill_md = path.join("SKILL.md");
+        Skill {
+            name: name.into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path,
+            skill_md,
+            sections: vec![],
+            states: vec![],
+        }
+    }
+
+    #[test]
+    fn run_all_with_empty_skills_produces_diagnostics() {
+        let config = Config::default();
+        let diags = run_all(&config, &[]);
+        // With empty skills, we expect diagnostics from:
+        // - enforced_states (all missing)
+        // - constraints (empty graph)
+        // - loop_state_files (missing docs files)
+        assert!(!diags.is_empty());
+        // It should be a Vec<Diagnostic>
+        let _: &Vec<Diagnostic> = &diags;
+    }
+
+    #[test]
+    fn run_all_with_skills_produces_diagnostics_vec() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        // Don't create a LOOP.md -- this will generate errors from completeness check etc.
+
+        let skills = vec![make_skill("test-skill", skill_dir)];
+        // Need a valid skills_dir for parse_all_handoffs
+        let mut config = Config::default();
+        config.skills_dir = dir.path().to_string_lossy().to_string();
+
+        let diags = run_all(&config, &skills);
+        // Just verify it returns diagnostics (will have some from various validators)
+        assert!(!diags.is_empty());
+        let _: &Vec<Diagnostic> = &diags;
+    }
 }

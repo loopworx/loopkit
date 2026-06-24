@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 /// Validate loop language conventions across all LOOP.md files.
 pub fn validate(
     skills: &[Skill],
-    all_handoffs: &HashMap<String, LoopContract>,
+    _all_handoffs: &HashMap<String, LoopContract>,
     config: &Config,
 ) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
@@ -66,7 +66,7 @@ fn check_halt_vocabulary(
             if skip_words.contains(&reason_lower.as_str()) {
                 continue;
             }
-            if config.halt_reasons.iter().all(|r| r != reason_lower) {
+            if config.halt_reasons.iter().all(|r| *r != reason_lower) {
                 diags.push(Diagnostic {
                     severity: Severity::Error,
                     code: "loop-unknown-halt-reason".to_string(),
@@ -260,5 +260,172 @@ mod tests {
         assert_eq!(merge_compound_verbs("hand"), "handoff");
         assert_eq!(merge_compound_verbs("off"), "handoff");
         assert_eq!(merge_compound_verbs("cross"), "cross-reference");
+    }
+
+    #[test]
+    fn check_verb_vocabulary_standard_verb_no_warning() {
+        let mut config = Config::default();
+        config.standard_verbs = vec!["trigger".to_string(), "handoff".to_string()];
+        let content = "1. trigger the thing\n2. handoff to agent\n";
+        let diags = check_verb_vocabulary(
+            content,
+            "test",
+            std::path::Path::new("LOOP.md"),
+            &config,
+        );
+        assert!(diags.is_empty(), "Expected no warnings but got: {:?}", diags);
+    }
+
+    #[test]
+    fn check_verb_vocabulary_nonstandard_verb_warning() {
+        let mut config = Config::default();
+        config.standard_verbs = vec!["trigger".to_string()];
+        let content = "1. flurbish the widget\n";
+        let diags = check_verb_vocabulary(
+            content,
+            "test",
+            std::path::Path::new("LOOP.md"),
+            &config,
+        );
+        assert!(!diags.is_empty());
+        assert!(diags.iter().any(|d| d.code == "loop-nonstandard-verb"));
+    }
+
+    #[test]
+    fn check_verb_vocabulary_skips_temporal_conjunctions() {
+        let mut config = Config::default();
+        config.standard_verbs = vec!["trigger".to_string()];
+        let content = "1. after the event\n";
+        let diags = check_verb_vocabulary(
+            content,
+            "test",
+            std::path::Path::new("LOOP.md"),
+            &config,
+        );
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn check_transition_syntax_with_valid_transitions_no_diagnostics() {
+        let content = "\
+## State Transition Rule
+transition in-dev → in-qa
+";
+        let diags = check_transition_syntax(
+            content,
+            "test",
+            std::path::Path::new("LOOP.md"),
+            &HashSet::new(),
+        );
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn check_transition_syntax_no_transitions_emits_error() {
+        let content = "\
+## State Transition Rule
+This section has no transition directives.
+";
+        let diags = check_transition_syntax(
+            content,
+            "test",
+            std::path::Path::new("LOOP.md"),
+            &HashSet::new(),
+        );
+        assert!(diags.iter().any(|d| d.code == "loop-no-transitions"));
+    }
+
+    #[test]
+    fn check_transition_syntax_no_state_transition_rule_section() {
+        let content = "\
+## Some Other Section
+no transitions here
+";
+        let diags = check_transition_syntax(
+            content,
+            "test",
+            std::path::Path::new("LOOP.md"),
+            &HashSet::new(),
+        );
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn halt_vocabulary_skips_skip_words() {
+        let config = Config::default();
+        // "the" is a skip word, so halt the should be ignored
+        let content = "halt the iteration";
+        let diags = check_halt_vocabulary(
+            content,
+            "test",
+            std::path::Path::new("LOOP.md"),
+            &config,
+        );
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn is_likely_action_verb_non_step_line() {
+        // A line that doesn't start with digit, -, or * is not an action verb
+        assert!(!is_likely_action_verb("trigger", "not a step line"));
+    }
+
+    #[test]
+    fn is_likely_action_verb_with_dash_step() {
+        assert!(is_likely_action_verb("trigger", "- do something"));
+    }
+
+    #[test]
+    fn is_likely_action_verb_with_star_step() {
+        assert!(is_likely_action_verb("trigger", "* do something"));
+    }
+
+    #[test]
+    fn is_likely_action_verb_skip_words() {
+        assert!(!is_likely_action_verb("if", "1. if condition"));
+        assert!(!is_likely_action_verb("when", "1. when ready"));
+        assert!(!is_likely_action_verb("is", "1. is valid"));
+        assert!(!is_likely_action_verb("are", "1. are green"));
+    }
+
+    #[test]
+    fn validate_with_valid_loop_md_no_diagnostics() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let skill_dir = dir.path().join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## State Transition Rule
+transition in-dev → in-qa
+  trigger all tests pass
+  handoff running-qa to qa-agent
+  halt stall after 5 iterations
+",
+        )
+        .unwrap();
+
+        use loopkit_core::types::Skill;
+        let skills = vec![Skill {
+            name: "test-skill".into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path: skill_dir.clone(),
+            skill_md: skill_dir.join("SKILL.md"),
+            sections: vec![],
+            states: vec![],
+        }];
+        let all_handoffs: HashMap<String, crate::types::LoopContract> = HashMap::new();
+        let mut config = Config::default();
+        config.standard_verbs = vec![
+            "trigger".into(), "handoff".into(), "halt".into(),
+        ];
+        config.halt_reasons = vec!["stall".into()];
+
+        let diags = validate(&skills, &all_handoffs, &config);
+        assert!(diags.is_empty(), "Expected no diagnostics but got: {:?}", diags);
     }
 }

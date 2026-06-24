@@ -97,7 +97,7 @@ fn check_skill_completeness(skills: &[Skill], config: &Config) -> Vec<Diagnostic
         }
 
         // Warn about duplicate Rules headings
-        let rules_count = section_names.iter().filter(|s| *s == "Rules").count();
+        let rules_count = section_names.iter().filter(|s| **s == "Rules").count();
         if rules_count > 1 {
             diags.push(Diagnostic {
                 severity: Severity::Error,
@@ -145,4 +145,154 @@ fn check_loop_completeness(
     }
 
     diags
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use loopkit_core::types::Section;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    fn make_skill(name: &str, level: &str, sections: Vec<Section>, path: PathBuf) -> Skill {
+        let skill_md = path.join("SKILL.md");
+        Skill {
+            name: name.into(),
+            level: level.into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path,
+            skill_md,
+            sections,
+            states: vec![],
+        }
+    }
+
+    #[test]
+    fn missing_description_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let skill = make_skill("test", "L3", vec![], dir.path().to_path_buf());
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "skill-missing-description"));
+    }
+
+    #[test]
+    fn missing_rules_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let sections = vec![Section { name: "Description".into(), body: "desc".into() }];
+        let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "skill-missing-rules"));
+    }
+
+    #[test]
+    fn missing_state_model_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let sections = vec![
+            Section { name: "Description".into(), body: "d".into() },
+            Section { name: "Rules".into(), body: "r".into() },
+        ];
+        let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "skill-missing-state-model"));
+    }
+
+    #[test]
+    fn l1_rigid_missing_entry_conditions_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let sections = vec![
+            Section { name: "Description".into(), body: "d".into() },
+            Section { name: "Rules".into(), body: "r".into() },
+            Section { name: "State Model".into(), body: "s".into() },
+            Section { name: "Halt Conditions".into(), body: "h".into() },
+        ];
+        let skill = make_skill("test", "L1-RIGID", sections, dir.path().to_path_buf());
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "skill-l1-missing-entry-conditions"));
+    }
+
+    #[test]
+    fn l1_rigid_missing_halt_conditions_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let sections = vec![
+            Section { name: "Description".into(), body: "d".into() },
+            Section { name: "Rules".into(), body: "r".into() },
+            Section { name: "State Model".into(), body: "s".into() },
+            Section { name: "Entry Conditions".into(), body: "e".into() },
+        ];
+        let skill = make_skill("test", "L1-RIGID", sections, dir.path().to_path_buf());
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "skill-l1-missing-halt-conditions"));
+    }
+
+    #[test]
+    fn duplicate_rules_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let sections = vec![
+            Section { name: "Description".into(), body: "d".into() },
+            Section { name: "Rules".into(), body: "r1".into() },
+            Section { name: "Rules".into(), body: "r2".into() },
+            Section { name: "State Model".into(), body: "s".into() },
+        ];
+        let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "skill-duplicate-rules"));
+    }
+
+    #[test]
+    fn skill_with_transitions_but_no_loop_md_emits_error() {
+        let dir = TempDir::new().unwrap();
+        let sections = vec![
+            Section { name: "Description".into(), body: "d".into() },
+            Section { name: "Rules".into(), body: "r".into() },
+            Section { name: "State Model".into(), body: "s".into() },
+        ];
+        let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
+        let mut all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        all_handoffs.insert(
+            "test".into(),
+            LoopContract {
+                skill: "test".into(),
+                sections: vec![],
+                section_order_valid: true,
+                transitions: vec![crate::types::TransitionRule {
+                    from: "a".into(), to: "b".into(),
+                    trigger: None, handoff_target: None, handoff_agent: None,
+                    halt_reason: None, halt_after: None, defined_in: "test".into(),
+                }],
+                loop_md_path: PathBuf::from("nonexistent/LOOP.md"),
+            },
+        );
+        let config = Config::default();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.iter().any(|d| d.code == "loop-missing-for-transition-skill"));
+    }
+
+    #[test]
+    fn valid_skill_no_errors() {
+        let dir = TempDir::new().unwrap();
+        let sections = vec![
+            Section { name: "Description".into(), body: "d".into() },
+            Section { name: "Rules".into(), body: "r".into() },
+            Section { name: "State Model".into(), body: "s".into() },
+        ];
+        let skill = make_skill("test", "L3", sections, dir.path().to_path_buf());
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags.is_empty());
+    }
 }

@@ -46,23 +46,28 @@ pub fn simulate_loop(transitions: &[Transition], max_iterations: u32) -> Vec<Str
         .collect();
 
     // If there are no terminals, every entry point is unreachable
-    if terminal_set.is_empty() && !entry_points.is_empty() {
-        for ep in &entry_points {
-            messages.push(format!(
-                "Entry point '{}' cannot reach any terminal state (no terminals exist)",
-                ep
-            ));
+    if terminal_set.is_empty() {
+        if !entry_points.is_empty() {
+            for ep in &entry_points {
+                messages.push(format!(
+                    "Entry point '{}' cannot reach any terminal state (no terminals exist)",
+                    ep
+                ));
+            }
+        } else if !all_states.is_empty() {
+            messages.push(
+                "No terminal states exist in the graph (all states have outbound edges)".to_string(),
+            );
         }
-        return messages;
-    }
-
-    // BFS from each entry point, bounded by max_iterations
-    for ep in &entry_points {
-        if !bfs_reaches_terminal(ep, &adj, &terminal_set, max_iterations) {
-            messages.push(format!(
-                "Entry point '{}' cannot reach any terminal state within the configured budget",
-                ep
-            ));
+    } else {
+        // BFS from each entry point, bounded by max_iterations
+        for ep in &entry_points {
+            if !bfs_reaches_terminal(ep, &adj, &terminal_set, max_iterations) {
+                messages.push(format!(
+                    "Entry point '{}' cannot reach any terminal state within the configured budget",
+                    ep
+                ));
+            }
         }
     }
 

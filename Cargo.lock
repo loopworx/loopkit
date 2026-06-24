@@ -222,6 +222,7 @@ dependencies = [
  "clap",
  "loopkit-core",
  "loopkit-graph",
+ "regex",
  "serde",
  "serde_json",
  "tempfile",

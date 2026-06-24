@@ -83,6 +83,125 @@ pub fn validate(skills: &[Skill], _all_skills: &[Skill]) -> Vec<Diagnostic> {
     diags
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    fn make_skill(name: &str, path: PathBuf) -> Skill {
+        let skill_md = path.join("SKILL.md");
+        Skill {
+            name: name.into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path: path.clone(),
+            skill_md,
+            sections: vec![],
+            states: vec![],
+        }
+    }
+
+    #[test]
+    fn loop_md_with_unknown_handoff_skill_warning() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("my-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "handoff unknown-skill to some-agent\n",
+        )
+        .unwrap();
+
+        let skills = vec![make_skill("my-skill", skill_dir.clone())];
+        let diags = validate(&skills, &skills);
+        assert!(diags.iter().any(|d| d.code == "xref-unknown-handoff-skill"));
+    }
+
+    #[test]
+    fn loop_md_with_known_skill_no_error() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("my-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "handoff known-skill to some-agent\n",
+        )
+        .unwrap();
+
+        let skills = vec![
+            make_skill("my-skill", skill_dir.clone()),
+            make_skill("known-skill", dir.path().join("known-skill")),
+        ];
+        let diags = validate(&skills, &skills);
+        assert!(!diags.iter().any(|d| d.code == "xref-unknown-handoff-skill"));
+    }
+
+    #[test]
+    fn loop_md_handoff_done_no_warning() {
+        let dir = TempDir::new().unwrap();
+        let skill_dir = dir.path().join("my-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "handoff done to all-agents\n",
+        )
+        .unwrap();
+
+        let skills = vec![make_skill("my-skill", skill_dir.clone())];
+        let diags = validate(&skills, &skills);
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn no_files_no_diagnostics() {
+        let skills: Vec<Skill> = vec![];
+        let diags = validate(&skills, &skills);
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn known_exceptions_are_recognized() {
+        // Test various known exception tokens
+        assert!(is_known_exception("story-id"));
+        assert!(is_known_exception("capability-slug"));
+        assert!(is_known_exception("story-123"));
+        assert!(is_known_exception("story-bs01"));
+        assert!(is_known_exception("ADR-XXX"));
+        assert!(is_known_exception("PROJ-28"));
+        assert!(is_known_exception("npm"));
+        assert!(is_known_exception("cargo"));
+        assert!(is_known_exception("dune"));
+        assert!(is_known_exception("coqc"));
+        assert!(is_known_exception("test"));
+        assert!(is_known_exception("Linear"));
+        assert!(is_known_exception("in-analysis"));
+        assert!(is_known_exception("ready-for-dev"));
+        assert!(is_known_exception("in-dev"));
+        assert!(is_known_exception("ready-for-deskcheck"));
+        assert!(is_known_exception("in-deskcheck"));
+        assert!(is_known_exception("ready-for-qa"));
+        assert!(is_known_exception("in-qa"));
+        assert!(is_known_exception("ready-for-acceptance"));
+        assert!(is_known_exception("in-acceptance"));
+        assert!(is_known_exception("ready-to-deploy"));
+        assert!(is_known_exception("done"));
+        assert!(is_known_exception("halted-stall"));
+        assert!(is_known_exception("halted-ambiguous"));
+        assert!(is_known_exception("halted-human-gate"));
+        assert!(is_known_exception("halted-unsafe"));
+        assert!(is_known_exception("in-progress"));
+        assert!(is_known_exception("some-agent")); // ends with -agent
+        assert!(is_known_exception("story-abc123")); // starts with story-
+        assert!(!is_known_exception("some-real-skill"));
+    }
+}
+
 /// Tokens that look like skill names but are known exceptions.
 fn is_known_exception(token: &str) -> bool {
     matches!(

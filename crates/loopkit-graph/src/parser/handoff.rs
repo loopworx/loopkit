@@ -208,8 +208,9 @@ pub fn parse_all_handoffs(
                     crate::parser::loop_::parse_loop_contract(&loop_md, &skill.name)
                 {
                     let mut contract = contract;
+                    let has_transitions = !rules.is_empty();
                     contract.transitions = rules;
-                    if !rules.is_empty() || !contract.sections.is_empty() {
+                    if has_transitions || !contract.sections.is_empty() {
                         result.insert(skill.name.clone(), contract);
                     }
                 }
@@ -408,5 +409,254 @@ transition in-dev → halted-stall
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].halt_reason.as_deref(), Some("stall"));
         assert_eq!(rules[0].halt_after, None);
+    }
+
+    #[test]
+    fn parse_handoff_table_with_valid_table() {
+        // Note: parse_handoff_table expects separator before header.
+        // The first line with `---` enables table mode, the next line is header,
+        // then data rows.
+        let content = "\
+|--------|-----------|------------------|
+| from   | to        | trigger          |
+| in-dev | in-qa     | all-ACs-green    |
+";
+        let rules = parse_handoff_table(content, "test-skill");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].from, "in-dev");
+        assert_eq!(rules[0].to, "in-qa");
+        assert_eq!(rules[0].trigger.as_deref(), Some("all-ACs-green"));
+    }
+
+    #[test]
+    fn parse_handoff_table_fallback_to_transition() {
+        let content = "\
+## State Transition Rule
+
+transition in-dev → in-qa
+  trigger all green
+";
+        let rules = parse_handoff_table(content, "test-skill");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].from, "in-dev");
+        assert_eq!(rules[0].to, "in-qa");
+    }
+
+    #[test]
+    fn parse_handoff_table_empty_content() {
+        let rules = parse_handoff_table("", "test-skill");
+        assert!(rules.is_empty());
+    }
+
+    #[test]
+    fn parse_all_handoffs_discovers_skills() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let skills_dir = dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+
+        let skill_dir = skills_dir.join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## Entry Conditions
+
+## Loop State Schema
+
+## Single Iteration Step
+
+## Proof of Progress
+
+## State Transition Rule
+transition in-dev → in-qa
+
+## Halt Conditions
+
+## Handoff Target
+",
+        )
+        .unwrap();
+
+        use loopkit_core::types::Skill;
+        let skills = vec![Skill {
+            name: "test-skill".into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path: skill_dir.clone(),
+            skill_md: skill_dir.join("SKILL.md"),
+            sections: vec![],
+            states: vec![],
+        }];
+
+        let handoffs = parse_all_handoffs(&skills_dir.to_string_lossy(), &skills);
+        assert!(handoffs.contains_key("test-skill"));
+    }
+
+    #[test]
+    fn parse_all_handoffs_legacy_works() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let skills_dir = dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+
+        // discover_skills requires depth 2: skills_dir/category/skill-name/
+        let category_dir = skills_dir.join("general");
+        let skill_dir = category_dir.join("test-skill");
+        std::fs::create_dir_all(&skill_dir).unwrap();
+        std::fs::write(
+            skill_dir.join("SKILL.md"),
+            "---\nname: test-skill\ndescription: A test\nlevel: L3\n---\n",
+        )
+        .unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## State Transition Rule
+transition in-dev → in-qa
+",
+        )
+        .unwrap();
+
+        let result = parse_all_handoffs_legacy(&skills_dir);
+        assert!(result.contains_key("test-skill"));
+        assert_eq!(result["test-skill"].len(), 1);
+    }
+
+    #[test]
+    fn parse_all_handoffs_legacy_empty_dir() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let result = parse_all_handoffs_legacy(dir.path());
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_all_handoffs_legacy_nonexistent_dir() {
+        let result = parse_all_handoffs_legacy(std::path::Path::new("/nonexistent/path/xyz"));
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_handoff_table_with_empty_cols_and_extra_header() {
+        let content = "\
+|--------|-----------|------------------|---------------|
+| from   | to        | trigger          | condition     |
+| in-dev | in-qa     | all-ACs-green    | -             |
+";
+        let rules = parse_handoff_table(content, "test-skill");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].from, "in-dev");
+        assert_eq!(rules[0].to, "in-qa");
+        assert_eq!(rules[0].trigger.as_deref(), Some("all-ACs-green"));
+    }
+
+    #[test]
+    fn parse_all_handoffs_with_handoffs_md_fallback() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let skills_dir = dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+
+        let skill_dir = skills_dir.join("test-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "").unwrap();
+        // No LOOP.md — but has HANDOFFS.md
+        std::fs::write(
+            skill_dir.join("HANDOFFS.md"),
+            "\
+## State Transition Rule
+transition in-dev → in-qa
+",
+        )
+        .unwrap();
+
+        use loopkit_core::types::Skill;
+        let skills = vec![Skill {
+            name: "test-skill".into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "".into(),
+            category: "".into(),
+            path: skill_dir.clone(),
+            skill_md: skill_dir.join("SKILL.md"),
+            sections: vec![],
+            states: vec![],
+        }];
+
+        let handoffs = parse_all_handoffs(&skills_dir.to_string_lossy(), &skills);
+        assert!(handoffs.contains_key("test-skill"));
+    }
+
+    #[test]
+    fn parse_all_handoffs_discovery_adds_new_skills() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let skills_dir = dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+
+        // A skill discovered only via directory scan (not in skills list)
+        let category_dir = skills_dir.join("general");
+        let skill_dir = category_dir.join("discovered-skill");
+        std::fs::create_dir_all(&skill_dir).unwrap();
+        std::fs::write(
+            skill_dir.join("SKILL.md"),
+            "---\nname: discovered-skill\ndescription: A test\nlevel: L3\n---\n",
+        )
+        .unwrap();
+        std::fs::write(
+            skill_dir.join("LOOP.md"),
+            "\
+## Entry Conditions
+
+## Loop State Schema
+
+## Single Iteration Step
+
+## Proof of Progress
+
+## State Transition Rule
+transition a → b
+
+## Halt Conditions
+
+## Handoff Target
+",
+        )
+        .unwrap();
+
+        // Pass empty skills — discovery should find it
+        use loopkit_core::types::Skill;
+        let skills: Vec<Skill> = vec![];
+
+        let handoffs = parse_all_handoffs(&skills_dir.to_string_lossy(), &skills);
+        assert!(handoffs.contains_key("discovered-skill"));
+    }
+
+    #[test]
+    fn parse_all_handoffs_legacy_with_handoffs_md() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let skills_dir = dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+
+        let category_dir = skills_dir.join("general");
+        let skill_dir = category_dir.join("test-skill");
+        std::fs::create_dir_all(&skill_dir).unwrap();
+        std::fs::write(
+            skill_dir.join("SKILL.md"),
+            "---\nname: test-skill\ndescription: A test\nlevel: L3\n---\n",
+        )
+        .unwrap();
+        // No LOOP.md — fallback to HANDOFFS.md
+        std::fs::write(
+            skill_dir.join("HANDOFFS.md"),
+            "\
+## State Transition Rule
+transition in-dev → in-qa
+",
+        )
+        .unwrap();
+
+        let result = parse_all_handoffs_legacy(&skills_dir);
+        assert!(result.contains_key("test-skill"));
+        assert_eq!(result["test-skill"].len(), 1);
     }
 }
