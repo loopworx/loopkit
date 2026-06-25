@@ -35,7 +35,7 @@ A skill without a state machine is documentation. A skill with a verifiable Loop
 
 ## What loopkit verifies
 
-loopkit runs 20 validators organized under two engines:
+loopkit runs 21 validators organized under two engines:
 
 ### The Graph Engine — state machine integrity
 
@@ -49,7 +49,7 @@ loopkit runs 20 validators organized under two engines:
 | `enforced_states` | Every configured mandatory state appears somewhere |
 | `deskcheck` | Desk check states have proper entry/feedback/forward edges |
 | `bug_feedback` | QA and acceptance states feed bugs back to development |
-| `loop_completeness` | Skill level (L1/L2/L3) has matching section requirements |
+| `loop_completeness` | Skill level (L1/L2/L3) has matching sections; SKILL.md references LOOP.md |
 | `loop_state_files` | External state files referenced by the contract exist |
 | `cross_references` | Every `handoff <skill>` points to a real skill |
 | `constraints` | Handoff targets follow configured routing rules |
@@ -93,10 +93,24 @@ loopkit /path/to/project --json
 
 Output:
 ```
-skills/running-tdd-loops/SKILL.md    Error    name-non-gerund      Skill name not a gerund (-ing form)
-skills/writing-stories/LOOP.md       Warning  loop-nonstandard-verb "flurbish" is not a standard verb
+────────────────────────────────────────────────────────────
+  loopkit v0.3.3
+  /path/to/project
+────────────────────────────────────────────────────────────
 
-21 skills checked. 1 error(s), 2 warning(s).
+ error   skills/running-tdd-loops/SKILL.md:74
+       name-non-gerund
+       Skill name not a gerund (-ing form)
+       hint: Rename to a gerund form (e.g., "running-tdd-loops")
+
+ warn    skills/writing-stories/LOOP.md:12
+       loop-nonstandard-verb
+       "flurbish" is not a standard verb
+
+────────────────────────────────────────────────────────────
+  FAIL   21 skills  181 verifications
+  1 errors  1 warnings  0 info
+────────────────────────────────────────────────────────────
 ```
 
 ---
@@ -130,6 +144,8 @@ metadata:
 
 ## State Model
 This skill operates across `in-dev`, `in-deskcheck`, and `halted-stall`.
+
+For the full state machine contract (transitions, halt conditions, handoff targets), see [LOOP.md](LOOP.md).
 ```
 
 ### LOOP.md — the contract

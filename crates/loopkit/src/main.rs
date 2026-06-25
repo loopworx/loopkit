@@ -1,11 +1,15 @@
 use clap::Parser;
 use loopkit_core::config::load_config;
-use loopkit_core::diagnostic::{diagnostics_json, format_diagnostics, format_summary};
+use loopkit_core::diagnostic::{
+    diagnostics_json, format_diagnostics, format_header, format_summary,
+};
 use loopkit_core::discovery::discover_skills;
 use loopkit_core::types::Severity;
 use loopkit_graph::validators;
 use std::path::PathBuf;
 use std::process;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser)]
 #[command(name = "loopkit", about = "Prove your agent skill loops are correct")]
@@ -31,13 +35,15 @@ fn main() {
 
     let (skills, discovery_diags) = discover_skills(&skills_dir);
 
+    if !cli.json {
+        println!("{}", format_header(VERSION, &cli.path));
+    }
+
     if cli.verbose {
-        eprintln!("=== loopkit v0.3.3 ===");
-        eprintln!("root: {}", cli.path.display());
-        eprintln!("skills_dir: {}", skills_dir.display());
-        eprintln!("skills discovered: {}", skills.len());
+        eprintln!("  skills_dir: {}", skills_dir.display());
+        eprintln!("  discovered: {} skills", skills.len());
         if !discovery_diags.is_empty() {
-            eprintln!("  discovery errors: {}", discovery_diags.len());
+            eprintln!("  discovery issues: {}", discovery_diags.len());
         }
         eprintln!();
     }
@@ -64,13 +70,17 @@ fn main() {
         .count();
 
     if cli.verbose {
+        let line = "─".repeat(60);
+        let dim_line = format!("\x1b[2m{}\x1b[0m", line);
         eprintln!();
-        eprintln!("=== diagnostics summary ===");
-        eprintln!("  total: {}", diagnostics.len());
-        eprintln!("  errors: {}", error_count);
-        eprintln!("  warnings: {}", warning_count);
-        eprintln!("  info: {}", info_count);
-        eprintln!("  verifications: {}", verifications);
+        eprintln!("{}", dim_line);
+        eprintln!("  {} diagnostics total", diagnostics.len());
+        eprintln!(
+            "  {} errors, {} warnings, {} info",
+            error_count, warning_count, info_count
+        );
+        eprintln!("  {} verifications ran", verifications);
+        eprintln!("{}", dim_line);
         eprintln!();
     }
 
@@ -80,7 +90,9 @@ fn main() {
             diagnostics_json(&diagnostics, skills.len(), verifications)
         );
     } else {
-        println!("{}", format_diagnostics(&diagnostics));
+        if !diagnostics.is_empty() {
+            println!("{}", format_diagnostics(&diagnostics));
+        }
         println!(
             "{}",
             format_summary(&diagnostics, skills.len(), verifications)
