@@ -126,9 +126,12 @@ jobs:
 
       - name: Publish loopkit-core
         run: cargo publish -p loopkit-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
 
       - name: Publish loopkit-graph
         run: cargo publish -p loopkit-graph --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
 
       - name: Publish loopkit
         run: cargo publish -p loopkit --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
