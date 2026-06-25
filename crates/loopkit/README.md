@@ -17,6 +17,7 @@
   <a href="https://crates.io/crates/loopkit"><img src="https://img.shields.io/crates/v/loopkit?color=ce422b&label=crates.io&logo=rust" alt="crates.io version"></a>
   <a href="https://github.com/loopworx/loopkit/releases"><img src="https://img.shields.io/github/v/release/loopworx/loopkit?color=blue&label=release" alt="GitHub release"></a>
   <a href="https://github.com/loopworx/loopkit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/loopworx/loopkit/ci.yml?branch=main&label=CI" alt="CI status"></a>
+  <a href="https://app.codecov.io/gh/loopworx/loopkit"><img src="https://img.shields.io/codecov/c/github/loopworx/loopkit?label=coverage" alt="coverage"></a>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
 </p>
 
