@@ -29,3 +29,5 @@ The helper moves through these states:
 - `backlog` — initial state
 - `in-dev` — development
 - `custom-state` — a non-enforced state
+
+See [LOOP.md](LOOP.md) for the full state machine.

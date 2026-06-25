@@ -118,7 +118,7 @@ fn check_skill_completeness(skills: &[Skill], config: &Config) -> Vec<Diagnostic
     diags
 }
 
-/// Check for LOOP.md presence in skills that define transition rules.
+/// Check for LOOP.md presence and referencing in skills that define transition rules.
 fn check_loop_completeness(
     skills: &[Skill],
     all_handoffs: &HashMap<String, LoopContract>,
@@ -131,7 +131,9 @@ fn check_loop_completeness(
             .map(|c| !c.transitions.is_empty())
             .unwrap_or(false);
 
-        if has_transitions && !skill.loop_md().exists() {
+        let loop_exists = skill.loop_md().exists();
+
+        if has_transitions && !loop_exists {
             diags.push(Diagnostic {
                 severity: Severity::Error,
                 code: "loop-missing-for-transition-skill".to_string(),
@@ -145,6 +147,25 @@ fn check_loop_completeness(
                     proof of progress, and halt conditions."
                         .to_string(),
             });
+        }
+
+        if loop_exists {
+            if let Ok(content) = std::fs::read_to_string(&skill.skill_md) {
+                if !content.contains("LOOP.md") {
+                    diags.push(Diagnostic {
+                        severity: Severity::Error,
+                        code: "loop-not-referenced-in-skill".to_string(),
+                        message: format!(
+                            "Skill `{}` has a LOOP.md but SKILL.md does not reference it",
+                            skill.name
+                        ),
+                        location: FileLocation::new(skill.skill_md.clone()),
+                        help: "Add a reference to LOOP.md in SKILL.md, e.g. 'For the full state \
+                            machine contract, see [LOOP.md](LOOP.md).'"
+                            .to_string(),
+                    });
+                }
+            }
         }
     }
 
@@ -372,5 +393,91 @@ mod tests {
         let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
         let diags = validate(&[skill], &all_handoffs, &config);
         assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn loop_md_not_referenced_in_skill_emits_error() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("LOOP.md"), "## Entry Conditions\n").unwrap();
+        std::fs::write(
+            dir.path().join("SKILL.md"),
+            "---\nname: test\ndescription: test\n---\n\n## Description\ntest\n## Rules\ntest\n## State Model\ntest\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test".into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "test".into(),
+            category: "".into(),
+            path: dir.path().to_path_buf(),
+            skill_md: dir.path().join("SKILL.md"),
+            sections: vec![
+                Section {
+                    name: "Description".into(),
+                    body: "d".into(),
+                },
+                Section {
+                    name: "Rules".into(),
+                    body: "r".into(),
+                },
+                Section {
+                    name: "State Model".into(),
+                    body: "s".into(),
+                },
+            ],
+            states: vec![],
+        };
+
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "loop-not-referenced-in-skill"));
+    }
+
+    #[test]
+    fn loop_md_referenced_in_skill_no_error() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("LOOP.md"), "## Entry Conditions\n").unwrap();
+        std::fs::write(
+            dir.path().join("SKILL.md"),
+            "---\nname: test\ndescription: test\n---\n\n## Description\ntest\n## Rules\ntest\n## State Model\ntest\n\nSee [LOOP.md](LOOP.md) for the full state machine.\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test".into(),
+            level: "L3".into(),
+            owner: vec![],
+            description: "test".into(),
+            category: "".into(),
+            path: dir.path().to_path_buf(),
+            skill_md: dir.path().join("SKILL.md"),
+            sections: vec![
+                Section {
+                    name: "Description".into(),
+                    body: "d".into(),
+                },
+                Section {
+                    name: "Rules".into(),
+                    body: "r".into(),
+                },
+                Section {
+                    name: "State Model".into(),
+                    body: "s".into(),
+                },
+            ],
+            states: vec![],
+        };
+
+        let config = Config::default();
+        let all_handoffs: HashMap<String, LoopContract> = HashMap::new();
+        let diags = validate(&[skill], &all_handoffs, &config);
+        assert!(!diags
+            .iter()
+            .any(|d| d.code == "loop-not-referenced-in-skill"));
     }
 }

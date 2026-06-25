@@ -70,7 +70,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
                     ));
                 }
                 let ref_lines = ref_content.lines().count();
-                if ref_lines > 100 {
+                let is_loop_md = ref_file.eq_ignore_ascii_case("LOOP.md");
+                if ref_lines > 100 && !is_loop_md {
                     let has_toc = ref_content.contains("## Table of Contents")
                         || ref_content.contains("## Contents")
                         || ref_content.contains("- [")

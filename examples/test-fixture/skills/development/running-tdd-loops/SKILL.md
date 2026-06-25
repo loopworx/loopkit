@@ -35,3 +35,5 @@ The development flow moves through these states:
 
 - halt stall after 10 iterations
 - halt human-gate when external approval is needed
+
+For the full state machine contract, see [LOOP.md](LOOP.md).

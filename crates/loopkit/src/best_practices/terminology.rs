@@ -1,4 +1,5 @@
 use loopkit_core::types::{Diagnostic, Skill};
+use regex::Regex;
 
 pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
@@ -22,7 +23,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
     for group in synonym_groups {
         let mut found: Vec<&str> = Vec::new();
         for word in *group {
-            if lower.contains(*word) {
+            let re = Regex::new(&format!(r"\b{}\b", word)).expect("hardcoded regex");
+            if re.is_match(&lower) {
                 found.push(word);
             }
         }
@@ -33,7 +35,8 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
             for (i, line) in content.lines().enumerate() {
                 let line_lower = line.to_lowercase();
                 for w in found.iter().skip(1) {
-                    if line_lower.contains(*w) && first != *w {
+                    let re = Regex::new(&format!(r"\b{}\b", w)).expect("hardcoded regex");
+                    if re.is_match(&line_lower) && first != *w {
                         conflict_line = Some((i + 1) as u32);
                         break;
                     }
@@ -102,6 +105,18 @@ mod tests {
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
         // "endpoint" is in group 1, "fetch" is not in any group — no conflicts
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn substring_does_not_trigger_false_positive() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        // "targets" contains "get" as substring but should not trigger
+        std::fs::write(&md_path, "Set transition targets for the state machine").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
         assert!(diags.is_empty());
     }
 }
