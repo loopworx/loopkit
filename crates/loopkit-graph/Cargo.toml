@@ -2,6 +2,10 @@
 name = "loopkit-graph"
 version = "0.3.0"
 edition = "2021"
+license = "MIT"
+description = "Graph validators and state-machine simulation for the Loop Language compiler"
+repository = "https://github.com/loopworx/loopkit"
+homepage = "https://github.com/loopworx/loopkit"
 
 [dependencies]
 loopkit-core = { path = "../loopkit-core" }

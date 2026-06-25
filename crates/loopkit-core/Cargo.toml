@@ -2,6 +2,10 @@
 name = "loopkit-core"
 version = "0.3.0"
 edition = "2021"
+license = "MIT"
+description = "Core types, config, and parser for the Loop Language compiler"
+repository = "https://github.com/loopworx/loopkit"
+homepage = "https://github.com/loopworx/loopkit"
 
 [dependencies]
 pulldown-cmark = "0.13"
