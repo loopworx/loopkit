@@ -7,6 +7,9 @@ use std::collections::HashSet;
 /// skills that actually exist.
 pub fn validate(skills: &[Skill], _all_skills: &[Skill], config: &Config) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
+    if skills.is_empty() {
+        return diags;
+    }
     let known_skills: HashSet<&str> = skills.iter().map(|s| s.name.as_str()).collect();
 
     // Check handoff directives in LOOP.md files

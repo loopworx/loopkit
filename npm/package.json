@@ -1,6 +1,6 @@
 {
   "name": "loopkit-cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "The Loop Language compiler — validates skill repositories against the Loop Language spec",
   "license": "MIT",
   "repository": {
@@ -28,7 +28,8 @@
   },
   "files": [
     "bin.js",
-    "postinstall.js"
+    "postinstall.js",
+    "README.md"
   ],
   "engines": {
     "node": ">=18"

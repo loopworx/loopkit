@@ -32,7 +32,7 @@ fn main() {
     let (skills, discovery_diags) = discover_skills(&skills_dir);
 
     if cli.verbose {
-        eprintln!("=== loopkit v0.3.0 ===");
+        eprintln!("=== loopkit v0.3.1 ===");
         eprintln!("root: {}", cli.path.display());
         eprintln!("skills_dir: {}", skills_dir.display());
         eprintln!("skills discovered: {}", skills.len());
