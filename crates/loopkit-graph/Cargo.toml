@@ -1,6 +1,6 @@
 [package]
 name = "loopkit-graph"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 license = "MIT"
 description = "Graph validators and state-machine simulation for the Loop Language compiler"
@@ -9,7 +9,7 @@ homepage = "https://github.com/loopworx/loopkit"
 readme = "README.md"
 
 [dependencies]
-loopkit-core = { path = "../loopkit-core", version = "0.3.2" }
+loopkit-core = { path = "../loopkit-core", version = "0.3.3" }
 lazy_static = "1.4"
 pulldown-cmark = "0.13"
 regex = "1.10"

@@ -1,7 +1,7 @@
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
-const { createGunzip } = require("zlib");
+const os = require("os");
 const { execSync } = require("child_process");
 
 const PACKAGE_JSON = require("./package.json");
@@ -57,24 +57,32 @@ async function install() {
     fs.mkdirSync(BINARY_DIR, { recursive: true });
   }
 
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "loopkit-"));
+  const archivePath = path.join(tmpDir, assetName);
+
+  // Download archive
   const res = await download(downloadUrl);
-  const binPath = path.join(BINARY_DIR, binName);
-  const out = fs.createWriteStream(binPath);
-
-  if (ext === ".tar.gz") {
-    res.pipe(createGunzip()).pipe(out);
-  } else {
-    res.pipe(out);
-  }
-
+  const out = fs.createWriteStream(archivePath);
+  res.pipe(out);
   await new Promise((resolve, reject) => {
     out.on("finish", resolve);
     out.on("error", reject);
   });
 
+  // Extract
+  if (ext === ".tar.gz") {
+    execSync(`tar xzf "${archivePath}" -C "${BINARY_DIR}"`);
+  } else {
+    execSync(`7z x "${archivePath}" -o"${BINARY_DIR}" -y`);
+  }
+
+  const binPath = path.join(BINARY_DIR, binName);
   if (PLATFORM !== "win32") {
     fs.chmodSync(binPath, 0o755);
   }
+
+  // Clean up temp
+  fs.rmSync(tmpDir, { recursive: true, force: true });
 
   console.log(`loopkit: installed v${VERSION} (${target})`);
 }
