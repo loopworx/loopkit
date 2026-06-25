@@ -8,7 +8,7 @@ repository = "https://github.com/loopworx/loopkit"
 homepage = "https://github.com/loopworx/loopkit"
 
 [dependencies]
-loopkit-core = { path = "../loopkit-core" }
+loopkit-core = { path = "../loopkit-core", version = "0.3.0" }
 lazy_static = "1.4"
 pulldown-cmark = "0.13"
 regex = "1.10"
