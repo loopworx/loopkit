@@ -17,21 +17,24 @@ use crate::types::{LoopContract, Transition};
 use loopkit_core::types::{Config, Diagnostic, Severity, Skill};
 use std::collections::HashMap;
 
-/// Run all validators and return unified diagnostics.
+/// Run all validators and return unified diagnostics plus the count of
+/// individual verifications that were executed.
 pub fn run_all(
     root: &std::path::Path,
     config: &Config,
     skills: &[Skill],
     verbose: bool,
-) -> Vec<Diagnostic> {
+) -> (Vec<Diagnostic>, usize) {
     let all_handoffs: HashMap<String, LoopContract> =
         parse_all_handoffs(&config.skills_dir, skills);
     let transitions: Vec<Transition> = build_transitions(skills, &all_handoffs);
 
     let mut diagnostics = Vec::new();
+    let mut verifications = 0usize;
 
     macro_rules! run {
         ($label:expr, $call:expr) => {{
+            verifications += 1;
             let diags = $call;
             if verbose {
                 let e = diags
@@ -116,7 +119,7 @@ pub fn run_all(
         constraints::validate(&transitions, skills, config)
     );
 
-    diagnostics
+    (diagnostics, verifications)
 }
 
 #[cfg(test)]
@@ -144,14 +147,14 @@ mod tests {
     fn run_all_with_empty_skills_produces_diagnostics() {
         let config = Config::default();
         let root = std::path::PathBuf::from(".");
-        let diags = run_all(&root, &config, &[], false);
+        let (diags, verifications) = run_all(&root, &config, &[], false);
         // With empty skills, we expect diagnostics from:
         // - enforced_states (all missing)
         // - constraints (empty graph)
         // - loop_state_files (missing docs files)
         assert!(!diags.is_empty());
-        // It should be a Vec<Diagnostic>
-        let _: &Vec<Diagnostic> = &diags;
+        // All 12 graph validators should run regardless of skill count
+        assert_eq!(verifications, 12);
     }
 
     #[test]
@@ -169,9 +172,9 @@ mod tests {
             ..Config::default()
         };
 
-        let diags = run_all(dir.path(), &config, &skills, false);
+        let (diags, verifications) = run_all(dir.path(), &config, &skills, false);
         // Just verify it returns diagnostics (will have some from various validators)
         assert!(!diags.is_empty());
-        let _: &Vec<Diagnostic> = &diags;
+        assert_eq!(verifications, 12);
     }
 }

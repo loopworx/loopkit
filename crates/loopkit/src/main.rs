@@ -30,7 +30,6 @@ fn main() {
     let skills_dir = cli.path.join(&config.skills_dir);
 
     let (skills, discovery_diags) = discover_skills(&skills_dir);
-    let mut diagnostics = discovery_diags.clone();
 
     if cli.verbose {
         eprintln!("=== loopkit v0.3.0 ===");
@@ -43,13 +42,13 @@ fn main() {
         eprintln!();
     }
 
-    diagnostics.extend(validators::run_all(
-        &cli.path,
-        &config,
-        &skills,
-        cli.verbose,
-    ));
-    diagnostics.extend(loopkit::best_practices::check_all(&skills, cli.verbose));
+    let (graph_diags, graph_verifications) =
+        validators::run_all(&cli.path, &config, &skills, cli.verbose);
+    let (bp_diags, bp_verifications) = loopkit::best_practices::check_all(&skills, cli.verbose);
+    let mut diagnostics = discovery_diags.clone();
+    diagnostics.extend(graph_diags);
+    diagnostics.extend(bp_diags);
+    let verifications = graph_verifications + bp_verifications;
 
     let error_count = diagnostics
         .iter()
@@ -71,14 +70,21 @@ fn main() {
         eprintln!("  errors: {}", error_count);
         eprintln!("  warnings: {}", warning_count);
         eprintln!("  info: {}", info_count);
+        eprintln!("  verifications: {}", verifications);
         eprintln!();
     }
 
     if cli.json {
-        println!("{}", diagnostics_json(&diagnostics, skills.len()));
+        println!(
+            "{}",
+            diagnostics_json(&diagnostics, skills.len(), verifications)
+        );
     } else {
         println!("{}", format_diagnostics(&diagnostics));
-        println!("{}", format_summary(&diagnostics, skills.len()));
+        println!(
+            "{}",
+            format_summary(&diagnostics, skills.len(), verifications)
+        );
     }
 
     if error_count > 0 {

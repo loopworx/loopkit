@@ -10,8 +10,12 @@ pub mod workflow;
 use loopkit_core::types::{Diagnostic, Skill};
 
 /// Run all best-practices checks across all skills.
-pub fn check_all(skills: &[Skill], verbose: bool) -> Vec<Diagnostic> {
+/// Returns (diagnostics, verification_count) where verification_count is the
+/// total number of individual check executions (per-skill checks count once
+/// per skill, cross-skill checks count once).
+pub fn check_all(skills: &[Skill], verbose: bool) -> (Vec<Diagnostic>, usize) {
     let mut diagnostics = Vec::new();
+    let mut verifications = 0usize;
 
     if verbose {
         eprintln!("=== best-practices validators ===");
@@ -21,6 +25,7 @@ pub fn check_all(skills: &[Skill], verbose: bool) -> Vec<Diagnostic> {
         ($label:expr, $call:expr) => {{
             let before = diagnostics.len();
             for skill in skills {
+                verifications += 1;
                 diagnostics.extend($call(skill));
             }
             let count = diagnostics.len() - before;
@@ -44,13 +49,14 @@ pub fn check_all(skills: &[Skill], verbose: bool) -> Vec<Diagnostic> {
     run_check!("scripts", scripts::check);
 
     let before = diagnostics.len();
+    verifications += 1;
     diagnostics.extend(naming::check_consistency(skills));
     let count = diagnostics.len() - before;
     if verbose && count > 0 {
         eprintln!("  {:>30}  {} diagnostics", "naming_consistency", count);
     }
 
-    diagnostics
+    (diagnostics, verifications)
 }
 
 #[cfg(test)]
@@ -79,8 +85,10 @@ mod tests {
 
     #[test]
     fn check_all_with_empty_skills_returns_empty() {
-        let diags = check_all(&[], false);
+        let (diags, verifications) = check_all(&[], false);
         assert!(diags.is_empty());
+        // 0 skills → 0 per-skill checks + 1 cross-skill consistency check
+        assert_eq!(verifications, 1);
     }
 
     #[test]
@@ -95,12 +103,14 @@ mod tests {
         std::fs::write(&md2, "content\n").unwrap();
         let s2 = make_skill("", "", dir2.path().to_path_buf(), md2);
 
-        let diags = check_all(&[s1, s2], false);
+        let (diags, verifications) = check_all(&[s1, s2], false);
         let missing_name_count = diags
             .iter()
             .filter(|d| d.code == "skill-missing-name")
             .count();
         assert_eq!(missing_name_count, 2);
+        // 2 skills × 8 per-skill checks + 1 cross-skill consistency = 17
+        assert_eq!(verifications, 17);
     }
 
     #[test]
@@ -125,7 +135,7 @@ mod tests {
             md2.clone(),
         );
 
-        let diags = check_all(&[s1, s2], false);
+        let (diags, _) = check_all(&[s1, s2], false);
         assert!(diags.iter().any(|d| d.code == "skill-naming-inconsistent"));
     }
 }

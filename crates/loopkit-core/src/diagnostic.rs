@@ -28,7 +28,11 @@ pub fn format_diagnostics(diagnostics: &[Diagnostic]) -> String {
     out
 }
 
-pub fn diagnostics_json(diagnostics: &[Diagnostic], skills_checked: usize) -> String {
+pub fn diagnostics_json(
+    diagnostics: &[Diagnostic],
+    skills_checked: usize,
+    verifications: usize,
+) -> String {
     use serde::Serialize;
 
     #[derive(Serialize)]
@@ -36,11 +40,13 @@ pub fn diagnostics_json(diagnostics: &[Diagnostic], skills_checked: usize) -> St
         errors: usize,
         warnings: usize,
         info: usize,
+        verifications: usize,
     }
 
     #[derive(Serialize)]
     struct Output<'a> {
         skills_checked: usize,
+        verifications: usize,
         diagnostics: &'a [Diagnostic],
         summary: Summary,
     }
@@ -60,18 +66,24 @@ pub fn diagnostics_json(diagnostics: &[Diagnostic], skills_checked: usize) -> St
 
     let output = Output {
         skills_checked,
+        verifications,
         diagnostics,
         summary: Summary {
             errors,
             warnings,
             info,
+            verifications,
         },
     };
 
     serde_json::to_string_pretty(&output).unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e))
 }
 
-pub fn format_summary(diagnostics: &[Diagnostic], skills_count: usize) -> String {
+pub fn format_summary(
+    diagnostics: &[Diagnostic],
+    skills_count: usize,
+    verifications: usize,
+) -> String {
     let errors = diagnostics
         .iter()
         .filter(|d| d.severity == Severity::Error)
@@ -81,8 +93,8 @@ pub fn format_summary(diagnostics: &[Diagnostic], skills_count: usize) -> String
         .filter(|d| d.severity == Severity::Warning)
         .count();
     format!(
-        "\n{} skills checked. {} error(s), {} warning(s).",
-        skills_count, errors, warnings
+        "\n{} skills checked. {} error(s), {} warning(s). {} verification(s) ran.",
+        skills_count, errors, warnings, verifications
     )
 }
 
@@ -188,8 +200,9 @@ mod tests {
 
     #[test]
     fn test_diagnostics_json_empty() {
-        let json = diagnostics_json(&[], 0);
+        let json = diagnostics_json(&[], 0, 0);
         assert!(json.contains(r#""skills_checked": 0"#));
+        assert!(json.contains(r#""verifications": 0"#));
         assert!(json.contains(r#""diagnostics": []"#));
         assert!(json.contains(r#""errors": 0"#));
     }
@@ -202,20 +215,22 @@ mod tests {
             make_diag(Severity::Warning, "W002", "warn2", "c.md"),
             make_diag(Severity::Info, "I001", "info", "d.md"),
         ];
-        let json = diagnostics_json(&diags, 5);
+        let json = diagnostics_json(&diags, 5, 42);
         // Parse it back to verify
         let v: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
         assert_eq!(v["skills_checked"], 5);
+        assert_eq!(v["verifications"], 42);
         assert_eq!(v["diagnostics"].as_array().unwrap().len(), 4);
         assert_eq!(v["summary"]["errors"], 1);
         assert_eq!(v["summary"]["warnings"], 2);
         assert_eq!(v["summary"]["info"], 1);
+        assert_eq!(v["summary"]["verifications"], 42);
     }
 
     #[test]
     fn test_diagnostics_json_is_valid_json() {
         let diags = vec![make_diag(Severity::Error, "E001", "err", "a.md")];
-        let json = diagnostics_json(&diags, 1);
+        let json = diagnostics_json(&diags, 1, 10);
         serde_json::from_str::<serde_json::Value>(&json).expect("should be valid JSON");
     }
 
@@ -223,10 +238,11 @@ mod tests {
 
     #[test]
     fn test_format_summary_zero_diagnostics() {
-        let s = format_summary(&[], 0);
+        let s = format_summary(&[], 0, 0);
         assert!(s.contains("0 skills checked"));
         assert!(s.contains("0 error(s)"));
         assert!(s.contains("0 warning(s)"));
+        assert!(s.contains("0 verification(s) ran"));
     }
 
     #[test]
@@ -237,18 +253,20 @@ mod tests {
             make_diag(Severity::Warning, "W001", "warn", "b.md"),
             make_diag(Severity::Info, "I001", "info", "c.md"),
         ];
-        let s = format_summary(&diags, 3);
+        let s = format_summary(&diags, 3, 180);
         assert!(s.contains("3 skills checked"));
         assert!(s.contains("2 error(s)"));
         assert!(s.contains("1 warning(s)"));
+        assert!(s.contains("180 verification(s) ran"));
     }
 
     #[test]
     fn test_format_summary_only_infos() {
         let diags = vec![make_diag(Severity::Info, "I001", "info", "c.md")];
-        let s = format_summary(&diags, 10);
+        let s = format_summary(&diags, 10, 90);
         assert!(s.contains("10 skills checked"));
         assert!(s.contains("0 error(s)"));
         assert!(s.contains("0 warning(s)"));
+        assert!(s.contains("90 verification(s) ran"));
     }
 }

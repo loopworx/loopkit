@@ -22,14 +22,17 @@ jobs:
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }} -p loopkit
@@ -40,41 +43,22 @@ jobs:
           cd target/${{ matrix.target }}/release
           tar czf loopkit-${{ matrix.target }}.tar.gz loopkit
 
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd target/${{ matrix.target }}/release
+          7z a loopkit-${{ matrix.target }}.zip loopkit.exe
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: loopkit-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/loopkit-${{ matrix.target }}.tar.gz
-
-  publish:
-    name: Publish to crates.io
-    runs-on: ubuntu-latest
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Publish loopkit-core
-        run: cargo publish -p loopkit-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true
-
-      - name: Publish loopkit-graph
-        run: cargo publish -p loopkit-graph --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true
-
-      - name: Publish loopkit
-        run: cargo publish -p loopkit --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true
+          path: target/${{ matrix.target }}/release/loopkit-${{ matrix.target }}.*
 
   github_release:
     name: GitHub Release
     runs-on: ubuntu-latest
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -83,5 +67,49 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*.tar.gz
+          files: artifacts/**/loopkit-*
           generate_release_notes: true
+
+  npm_publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: github_release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Set version from tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          echo "Version: $TAG"
+          cd npm
+          npm version "$TAG" --no-git-tag-version --allow-same-version
+
+      - name: Publish
+        run: |
+          cd npm
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  crates_publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish loopkit-core
+        run: cargo publish -p loopkit-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Publish loopkit-graph
+        run: cargo publish -p loopkit-graph --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Publish loopkit
+        run: cargo publish -p loopkit --token ${{ secrets.CARGO_REGISTRY_TOKEN }}

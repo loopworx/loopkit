@@ -1,0 +1,36 @@
+{
+  "name": "loopkit",
+  "version": "0.3.0",
+  "description": "The Loop Language compiler — validates skill repositories against the Loop Language spec",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loopworx/loopkit"
+  },
+  "homepage": "https://github.com/loopworx/loopkit",
+  "bugs": {
+    "url": "https://github.com/loopworx/loopkit/issues"
+  },
+  "keywords": [
+    "loop",
+    "language",
+    "compiler",
+    "validator",
+    "agent",
+    "skill",
+    "llm"
+  ],
+  "bin": {
+    "loopkit": "bin.js"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "files": [
+    "bin.js",
+    "postinstall.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -17,11 +17,11 @@ fn run_fixture() -> (Vec<loopkit_core::types::Diagnostic>, usize) {
     let skills_dir = root.join(&config.skills_dir);
     let (skills, discovery_diags) = loopkit_core::discovery::discover_skills(&skills_dir);
 
+    let (graph_diags, _) = loopkit_graph::validators::run_all(&root, &config, &skills, false);
+    let (bp_diags, _) = loopkit::best_practices::check_all(&skills, false);
     let mut all_diags = discovery_diags;
-    all_diags.extend(loopkit_graph::validators::run_all(
-        &root, &config, &skills, false,
-    ));
-    all_diags.extend(loopkit::best_practices::check_all(&skills, false));
+    all_diags.extend(graph_diags);
+    all_diags.extend(bp_diags);
 
     (all_diags, skills.len())
 }
@@ -285,7 +285,7 @@ fn valid_skill_has_no_structure_errors() {
 #[test]
 fn json_output_format_is_valid() {
     let (diags, skills_count) = run_fixture();
-    let json = loopkit_core::diagnostic::diagnostics_json(&diags, skills_count);
+    let json = loopkit_core::diagnostic::diagnostics_json(&diags, skills_count, 0);
     let parsed: serde_json::Value =
         serde_json::from_str(&json).expect("JSON output should be valid");
     assert_eq!(parsed["skills_checked"], skills_count as u64);
@@ -299,7 +299,7 @@ fn summary_counts_match_diagnostics() {
     let (diags, skills_count) = run_fixture();
     let err_count = errors(&diags).len();
     let warn_count = warnings(&diags).len();
-    let json = loopkit_core::diagnostic::diagnostics_json(&diags, skills_count);
+    let json = loopkit_core::diagnostic::diagnostics_json(&diags, skills_count, 0);
     let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
     assert_eq!(parsed["summary"]["errors"], err_count as u64);
     assert_eq!(parsed["summary"]["warnings"], warn_count as u64);
@@ -309,7 +309,7 @@ fn summary_counts_match_diagnostics() {
 fn text_output_contains_all_diagnostics() {
     let (diags, skills_count) = run_fixture();
     let text = loopkit_core::diagnostic::format_diagnostics(&diags);
-    let summary = loopkit_core::diagnostic::format_summary(&diags, skills_count);
+    let summary = loopkit_core::diagnostic::format_summary(&diags, skills_count, 0);
 
     for d in &diags {
         assert!(
