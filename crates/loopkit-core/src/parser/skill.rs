@@ -111,10 +111,8 @@ pub fn parse_sections(content: &str) -> Vec<Section> {
                     current_body.push('`');
                 }
             }
-            Event::SoftBreak | Event::HardBreak => {
-                if current_name.is_some() {
-                    current_body.push('\n');
-                }
+            Event::SoftBreak | Event::HardBreak if current_name.is_some() => {
+                current_body.push('\n');
             }
             _ => {}
         }
@@ -179,10 +177,8 @@ pub fn extract_section_body(content: &str, heading: &str) -> Option<String> {
                     body.push('`');
                 }
             }
-            Event::SoftBreak | Event::HardBreak => {
-                if in_target && !target_ended {
-                    body.push('\n');
-                }
+            Event::SoftBreak | Event::HardBreak if in_target && !target_ended => {
+                body.push('\n');
             }
             _ => {}
         }
