@@ -22,6 +22,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - run: cargo test --workspace
+        env:
+          NO_COLOR: "1"
 
   clippy:
     name: Clippy

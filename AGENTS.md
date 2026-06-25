@@ -9,7 +9,7 @@ The Loop Language compiler — validates skill repositories against the Loop Lan
 ```bash
 cargo +stable clippy --workspace --all-targets -- -D warnings
 cargo +stable fmt --all -- --check
-cargo +stable test --workspace
+NO_COLOR=1 cargo +stable test --workspace
 ```
 
 All three must pass before committing. Local nightly toolchain may not catch all lints that stable clippy enforces.

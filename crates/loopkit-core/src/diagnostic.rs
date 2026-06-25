@@ -1,4 +1,5 @@
 use crate::types::{Diagnostic, Severity};
+use std::sync::OnceLock;
 
 const RESET: &str = "\x1b[0m";
 const BOLD: &str = "\x1b[1m";
@@ -10,8 +11,10 @@ const BLUE: &str = "\x1b[34m";
 const CYAN: &str = "\x1b[36m";
 const WHITE: &str = "\x1b[37m";
 
+static COLOR_ENABLED: OnceLock<bool> = OnceLock::new();
+
 fn should_color() -> bool {
-    std::env::var("NO_COLOR").is_err()
+    *COLOR_ENABLED.get_or_init(|| std::env::var("NO_COLOR").is_err())
 }
 
 fn paint(text: &str, color: &str) -> String {
@@ -324,19 +327,16 @@ mod tests {
 
     #[test]
     fn test_format_summary_zero_diagnostics() {
-        std::env::set_var("NO_COLOR", "1");
         let s = format_summary(&[], 0, 0);
         assert!(s.contains("0 skills"));
         assert!(s.contains("0 verifications"));
         assert!(s.contains("0 errors"));
         assert!(s.contains("0 warnings"));
         assert!(s.contains("PASS"));
-        std::env::remove_var("NO_COLOR");
     }
 
     #[test]
     fn test_format_summary_with_errors_shows_fail() {
-        std::env::set_var("NO_COLOR", "1");
         let diags = vec![
             make_diag(Severity::Error, "E001", "err", "a.md"),
             make_diag(Severity::Error, "E002", "err", "a.md"),
@@ -349,16 +349,13 @@ mod tests {
         assert!(s.contains("180 verifications"));
         assert!(s.contains("2 errors"));
         assert!(s.contains("1 warnings"));
-        std::env::remove_var("NO_COLOR");
     }
 
     #[test]
     fn test_format_summary_only_warnings_shows_pass() {
-        std::env::set_var("NO_COLOR", "1");
         let diags = vec![make_diag(Severity::Warning, "W001", "warn", "b.md")];
         let s = format_summary(&diags, 10, 90);
         assert!(s.contains("PASS"));
         assert!(s.contains("1 warnings"));
-        std::env::remove_var("NO_COLOR");
     }
 }

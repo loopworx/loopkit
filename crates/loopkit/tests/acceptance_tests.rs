@@ -307,7 +307,6 @@ fn summary_counts_match_diagnostics() {
 
 #[test]
 fn text_output_contains_all_diagnostics() {
-    std::env::set_var("NO_COLOR", "1");
     let (diags, skills_count) = run_fixture();
     let text = loopkit_core::diagnostic::format_diagnostics(&diags);
     let summary = loopkit_core::diagnostic::format_summary(&diags, skills_count, 0);
@@ -322,7 +321,6 @@ fn text_output_contains_all_diagnostics() {
     assert!(summary.contains(&format!("{} skills", skills_count)));
     assert!(summary.contains("errors"));
     assert!(summary.contains("warnings"));
-    std::env::remove_var("NO_COLOR");
 }
 
 #[test]
