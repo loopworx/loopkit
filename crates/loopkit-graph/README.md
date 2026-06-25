@@ -19,7 +19,7 @@
 </p>
 
 ```bash
-cargo install loopkit
+npm install -g loopkit-cli
 loopkit /path/to/project --verbose
 ```
 
@@ -72,7 +72,13 @@ loopkit runs 20 validators organized under two engines:
 ## Quick Start
 
 ```bash
-# Install
+# Install with npm (no Rust toolchain needed)
+npm install -g loopkit-cli
+
+# Or run instantly without installing
+npx loopkit-cli /path/to/project
+
+# Or install with Cargo
 cargo install loopkit
 
 # Check a project
