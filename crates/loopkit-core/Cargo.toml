@@ -1,6 +1,6 @@
 [package]
 name = "loopkit-core"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 license = "MIT"
 description = "Core types, config, and parser for the Loop Language compiler"
