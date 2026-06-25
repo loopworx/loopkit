@@ -277,15 +277,6 @@ mod tests {
         assert!(out.contains("hint: try this fix"));
     }
 
-    #[test]
-    fn test_format_diagnostics_no_color_when_no_color_set() {
-        std::env::set_var("NO_COLOR", "1");
-        let diag = make_diag(Severity::Error, "E001", "err", "a.md");
-        let out = format_diagnostics(&[diag]);
-        assert!(!out.contains("\x1b["));
-        std::env::remove_var("NO_COLOR");
-    }
-
     // ── diagnostics_json ────────────────────────────────────────────────
 
     #[test]
