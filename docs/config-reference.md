@@ -183,4 +183,4 @@ enforced_states:
 
 ## Example: full forge config
 
-See the [forge `.loopkit.yaml`](https://github.com/yaman/forge/blob/main/.loopkit.yaml) for a production example with 10 enforced states, 40 standard verbs, desk check and bug feedback validators enabled.
+See the [forge `.loopkit.yaml`](https://github.com/loopworx/forge/blob/main/.loopkit.yaml) for a production example with 10 enforced states, 40 standard verbs, desk check and bug feedback validators enabled.
