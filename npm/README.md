@@ -1,6 +1,22 @@
-# loopkit
+<p align="center">
+  <img src="assets/loopkit-icon.png" alt="loopkit" width="200">
+</p>
 
-**The Loop Language compiler.** loopkit verifies that your agent skills follow the Loop Language — a formal contract language for agent behavior. Skills written in plain markdown don't give agents clear instructions. Skills written in the Loop Language define what the agent should do, how it proves progress, when it stops, and who it hands off to — all machine-verifiable before anything hits production.
+<h1 align="center">loopkit</h1>
+
+<p align="center">
+  <strong>The Loop Language compiler.</strong> loopkit verifies that your agent skills follow the Loop Language — a formal contract language for agent behavior.
+</p>
+
+<p align="center">
+  Skills written in plain markdown don't give agents clear instructions. Skills written in the Loop Language define what the agent should do, how it proves progress, when it stops, and who it hands off to — all machine-verifiable before anything hits production.
+</p>
+
+<p align="center">
+  <a href="https://github.com/loopworx/loopkit/releases">Download</a> |
+  <a href="#quick-start">Quick Start</a> |
+  <a href="docs/loop-language.md">Docs</a>
+</p>
 
 ```bash
 cargo install loopkit
