@@ -224,4 +224,73 @@ mod tests {
         let diags = check_consistency(&skills);
         assert!(diags.is_empty());
     }
+
+    #[test]
+    fn name_mismatch_dir_reports_error() {
+        let skill = Skill {
+            name: "my-skill".into(),
+            description: String::new(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: std::path::PathBuf::from("skills/wrong-dir"),
+            skill_md: std::path::PathBuf::from("skills/wrong-dir/SKILL.md"),
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-name-mismatch-dir"));
+    }
+
+    #[test]
+    fn leading_hyphen_reports_error() {
+        let skill = make_skill("-bad-name");
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-name-leading-hyphen"));
+    }
+
+    #[test]
+    fn trailing_hyphen_reports_error() {
+        let skill = make_skill("bad-name-");
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-name-trailing-hyphen"));
+    }
+
+    #[test]
+    fn consecutive_hyphens_reports_error() {
+        let skill = make_skill("bad--name");
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-name-consecutive-hyphens"));
+    }
+
+    #[test]
+    fn empty_name_no_naming_diagnostics() {
+        let skill = make_skill("");
+        let diags = check(&skill);
+        // empty name: dir check skipped, vague check doesn't match empty
+        assert!(!diags.iter().any(|d| d.code == "skill-name-mismatch-dir"));
+    }
+
+    #[test]
+    fn consistency_with_all_nouns_no_warning() {
+        let skills = vec![make_skill("tests"), make_skill("builds")];
+        let diags = check_consistency(&skills);
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn consistency_with_single_skill_no_warning() {
+        let skills = vec![make_skill("running-tests")];
+        let diags = check_consistency(&skills);
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn consistency_with_empty_names_skipped() {
+        let skills = vec![make_skill(""), make_skill("")];
+        let diags = check_consistency(&skills);
+        assert!(diags.is_empty());
+    }
 }

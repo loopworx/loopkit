@@ -61,7 +61,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Run coverage
-        run: cargo tarpaulin --lib --out xml
+        run: cargo tarpaulin --lib --workspace --out xml --fail-under 94
         env:
           NO_COLOR: "1"
 

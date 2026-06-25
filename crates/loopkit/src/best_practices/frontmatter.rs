@@ -353,4 +353,164 @@ mod tests {
         let diags = check(&skill);
         assert!(diags.is_empty());
     }
+
+    #[test]
+    fn compatibility_too_long_reports_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let compat = "x".repeat(501);
+        std::fs::write(
+            &md_path,
+            format!(
+                "---\nname: test-skill\ndescription: A test\ncompatibility: {}\n---\n",
+                compat
+            ),
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-compatibility-too-long"));
+    }
+
+    #[test]
+    fn allowed_tools_comma_separated_reports_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\nallowed-tools: tool-a,tool-b\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-allowed-tools-format"));
+    }
+
+    #[test]
+    fn metadata_inline_map_reports_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\nmetadata: {\"key\": \"val\"}\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-metadata-inline-map"));
+    }
+
+    #[test]
+    fn unknown_frontmatter_key_reports_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\nunknown-key: value\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-unknown-frontmatter-key"));
+    }
+
+    #[test]
+    fn x_prefixed_custom_key_no_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\nx-custom: value\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(!diags
+            .iter()
+            .any(|d| d.code == "skill-unknown-frontmatter-key"));
+    }
+
+    #[test]
+    fn second_person_description_reports_warning() {
+        let skill = make_skill("test-skill", "You can do things");
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-description-not-third-person"));
+    }
+
+    #[test]
+    fn we_description_reports_warning() {
+        let skill = make_skill("test-skill", "We process data");
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-description-not-third-person"));
+    }
+
+    #[test]
+    fn anthropic_reserved_word_reports_error() {
+        let skill = make_skill("anthropic-skill", "test");
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-name-reserved-word"));
+    }
 }

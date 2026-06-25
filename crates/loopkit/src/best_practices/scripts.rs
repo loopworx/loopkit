@@ -226,4 +226,84 @@ mod tests {
         let diags = check(&skill);
         assert!(diags.is_empty());
     }
+
+    #[test]
+    fn script_with_h_flag_no_help_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "See scripts/run.sh").unwrap();
+        let scripts = dir.path().join("scripts");
+        std::fs::create_dir(&scripts).unwrap();
+        std::fs::write(
+            scripts.join("run.sh"),
+            "# /// script\n# dependencies = [\"ripgrep\"]\n# ///\nif [ \"$1\" = \"-h\" ]; then\n  echo usage\nfi\n",
+        )
+        .unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-script-no-help"));
+    }
+
+    #[test]
+    fn npx_command_without_scripts_dir_suggests_bundling() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "```bash\nnpx prettier --write .\n```").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-scripts-suggested"));
+    }
+
+    #[test]
+    fn bunx_command_without_scripts_dir_suggests_bundling() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "```bash\nbunx eslint .\n```").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-scripts-suggested"));
+    }
+
+    #[test]
+    fn deno_command_without_scripts_dir_suggests_bundling() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "```bash\ndeno run check.ts\n```").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-scripts-suggested"));
+    }
+
+    #[test]
+    fn script_with_usage_label_no_help_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "See scripts/run.py").unwrap();
+        let scripts = dir.path().join("scripts");
+        std::fs::create_dir(&scripts).unwrap();
+        std::fs::write(
+            scripts.join("run.py"),
+            "# /// script\n# dependencies = [\"rich\"]\n# ///\nprint('usage: run.py <input>')\n",
+        )
+        .unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-script-no-help"));
+    }
+
+    #[test]
+    fn unreadable_skill_md_returns_empty() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        // Don't create file
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.is_empty());
+    }
 }

@@ -349,4 +349,50 @@ mod tests {
         assert!(s.contains("PASS"));
         assert!(s.contains("1 warnings"));
     }
+
+    #[test]
+    fn test_format_summary_only_infos_shows_pass() {
+        let diags = vec![make_diag(Severity::Info, "I001", "info", "c.md")];
+        let s = format_summary(&diags, 10, 90);
+        assert!(s.contains("PASS"));
+        assert!(s.contains("1 info"));
+    }
+
+    #[test]
+    fn test_format_header_contains_version_and_path() {
+        let s = format_header("1.2.3", std::path::Path::new("/test/path"));
+        assert!(s.contains("1.2.3"));
+        assert!(s.contains("/test/path"));
+        assert!(s.contains("loopkit"));
+    }
+
+    #[test]
+    fn test_format_diagnostics_with_column() {
+        let mut diag = make_diag(Severity::Error, "E001", "err", "foo.md");
+        diag.location = FileLocation::at(PathBuf::from("foo.md"), 10, 5);
+        let out = format_diagnostics(&[diag]);
+        assert!(out.contains("foo.md:10:5"));
+    }
+
+    #[test]
+    fn test_format_diagnostics_multiple_severities() {
+        let diags = vec![
+            make_diag(Severity::Error, "E001", "err", "a.md"),
+            make_diag(Severity::Warning, "W001", "warn", "b.md"),
+            make_diag(Severity::Info, "I001", "info", "c.md"),
+        ];
+        let out = format_diagnostics(&diags);
+        assert!(out.contains("error"));
+        assert!(out.contains("warn"));
+        assert!(out.contains("info"));
+    }
+
+    #[test]
+    fn test_format_diagnostics_no_path_line_only() {
+        let mut diag = make_diag(Severity::Error, "E001", "err", "a.md");
+        diag.location.line = Some(10);
+        diag.location.column = None;
+        let out = format_diagnostics(&[diag]);
+        assert!(out.contains("a.md:10"));
+    }
 }

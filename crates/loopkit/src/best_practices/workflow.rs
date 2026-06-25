@@ -168,4 +168,80 @@ mod tests {
         let diags = check(&skill);
         assert!(diags.is_empty());
     }
+
+    #[test]
+    fn missing_feedback_loop_reports_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let content = "\n".repeat(20) + "implement the feature\ntest the implementation\n";
+        std::fs::write(&md_path, &content).unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-missing-feedback-loop"));
+    }
+
+    #[test]
+    fn has_feedback_loop_no_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let content = "\n".repeat(20)
+            + "implement the feature\nvalidate the test\nfix issues\nrepeat until done\n";
+        std::fs::write(&md_path, &content).unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags
+            .iter()
+            .any(|d| d.code == "skill-missing-feedback-loop"));
+    }
+
+    #[test]
+    fn missing_conditionals_reports_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let content = "\n".repeat(20) + "decide between either option\nchoose the path\n";
+        std::fs::write(&md_path, &content).unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-missing-conditionals"));
+    }
+
+    #[test]
+    fn has_conditionals_no_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let content = "\n".repeat(20) + "decide between options\nif condition then proceed\n";
+        std::fs::write(&md_path, &content).unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-missing-conditionals"));
+    }
+
+    #[test]
+    fn numbered_steps_count_as_checklist() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let content = "\n".repeat(20) + "1. first step\n2. second step\n";
+        std::fs::write(&md_path, &content).unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-missing-checklist"));
+    }
+
+    #[test]
+    fn unreadable_skill_md_returns_empty() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        // Don't create the file — read_to_string will fail
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.is_empty());
+    }
 }

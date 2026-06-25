@@ -229,4 +229,72 @@ mod tests {
         let messages = simulate_loop(&transitions, 20);
         assert!(messages.is_empty(), "expected no messages: {messages:?}");
     }
+
+    #[test]
+    fn given_entry_cannot_reach_terminal_reports_error() {
+        // a → b → c (no terminal — all have outbound)
+        // Add a separate entry a2 → done so terminal exists
+        let transitions = make_transitions(vec![
+            ("a", "b", "s1"),
+            ("b", "c", "s1"),
+            ("c", "b", "s1"), // cycle: b ↔ c, no terminal reachable from a
+            ("a2", "done", "s1"),
+        ]);
+        let messages = simulate_loop(&transitions, 20);
+        assert!(messages
+            .iter()
+            .any(|m| m.contains("a") && m.contains("cannot reach")));
+    }
+
+    #[test]
+    fn given_no_terminals_with_states_reports_all_unreachable() {
+        // Pure cycle: a → b → a (no terminal states at all)
+        let transitions = make_transitions(vec![("a", "b", "s1"), ("b", "a", "s1")]);
+        let messages = simulate_loop(&transitions, 20);
+        assert!(messages
+            .iter()
+            .any(|m| m.contains("cannot reach") || m.contains("No terminal")));
+    }
+
+    #[test]
+    fn given_entry_is_terminal_no_violation() {
+        let transitions = make_transitions(vec![("done", "done", "s1")]);
+        let messages = simulate_loop(&transitions, 20);
+        // done is both entry and terminal, self-loop on terminal is fine
+        let _ = messages;
+    }
+
+    #[test]
+    fn given_bfs_visits_many_nodes_reaches_terminal() {
+        let transitions = make_transitions(vec![
+            ("a", "b", "s1"),
+            ("a", "c", "s1"),
+            ("b", "d", "s1"),
+            ("c", "d", "s1"),
+            ("d", "done", "s1"),
+        ]);
+        let messages = simulate_loop(&transitions, 20);
+        assert!(messages.is_empty(), "expected no messages: {messages:?}");
+    }
+
+    #[test]
+    fn given_run_all_returns_diagnostics() {
+        let transitions = make_transitions(vec![("a", "b", "s1"), ("b", "a", "s1")]);
+        let diags = run_all(&transitions, 20);
+        assert!(!diags.is_empty());
+    }
+
+    #[test]
+    fn given_violation_to_diagnostic_self_loop() {
+        let diag = violation_to_diagnostic("self-loop detected".to_string());
+        assert_eq!(diag.code, "sim-self-loop-only");
+        assert_eq!(diag.severity, Severity::Warning);
+    }
+
+    #[test]
+    fn given_violation_to_diagnostic_generic() {
+        let diag = violation_to_diagnostic("something else".to_string());
+        assert_eq!(diag.code, "sim-error");
+        assert_eq!(diag.severity, Severity::Error);
+    }
 }

@@ -157,4 +157,56 @@ mod tests {
         let diags = validate(&transitions, &config);
         assert!(diags.is_empty());
     }
+
+    #[test]
+    fn missing_forward_reports_error() {
+        let config = test_config();
+        let transitions = vec![
+            t("in-dev", "in-deskcheck"),
+            t("in-deskcheck", "in-dev"),
+            // missing: in-deskcheck → in-qa
+        ];
+        let diags = validate(&transitions, &config);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "state-missing-deskcheck-completion"));
+    }
+
+    #[test]
+    fn disabled_when_state_empty() {
+        let config = Config {
+            deskcheck_enabled: true,
+            deskcheck_state: String::new(),
+            ..Config::default()
+        };
+        let transitions = vec![t("in-dev", "in-deskcheck")];
+        let diags = validate(&transitions, &config);
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn all_rules_violated_reports_errors() {
+        let config = test_config();
+        // deskcheck state exists in graph but missing entry, feedback, and forward
+        let transitions = vec![t("in-deskcheck", "somewhere")];
+        let diags = validate(&transitions, &config);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "state-missing-deskcheck-entry"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "state-missing-deskcheck-feedback"));
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "state-missing-deskcheck-completion"));
+    }
+
+    #[test]
+    fn deskcheck_state_not_in_graph_no_diagnostics() {
+        let config = test_config();
+        let transitions = vec![t("in-dev", "in-qa")];
+        let diags = validate(&transitions, &config);
+        // deskcheck_state "in-deskcheck" not in adjacency map → early return
+        assert!(diags.is_empty());
+    }
 }
