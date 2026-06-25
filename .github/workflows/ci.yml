@@ -61,7 +61,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Run coverage
-        run: cargo tarpaulin --workspace --out xml
+        run: cargo tarpaulin --lib --out xml
 
       - uses: codecov/codecov-action@v4
         with:
