@@ -158,6 +158,29 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
             }
             diags.push(diag);
         }
+
+        // Check: description should indicate when to use the skill
+        let has_trigger = lower.contains("use when")
+            || lower.contains("use for")
+            || lower.contains("use if")
+            || lower.contains("applies when")
+            || lower.contains("run when")
+            || lower.contains("triggers")
+            || lower.contains("requires")
+            || lower.contains("use this")
+            || lower.contains("activate");
+        if !has_trigger && desc.len() > 20 {
+            let line = find_yaml_line("description");
+            let mut diag = Diagnostic::warning(
+                "skill-description-missing-trigger",
+                "description doesn't indicate when to use this skill. Add a 'Use when...' or 'Use for...' clause so agents know when to activate it".into(),
+                path.clone(),
+            );
+            if let Some(l) = line {
+                diag = diag.at_line(l);
+            }
+            diags.push(diag);
+        }
     }
 
     // Optional frontmatter fields: compatibility, license, metadata, allowed-tools
@@ -203,6 +226,29 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
                 diag = diag.at_line(l);
             }
             diags.push(diag);
+        }
+    }
+
+    // Validate license: if it references a file, verify the file exists
+    if let Some(license) = raw_frontmatter.get("license") {
+        let lower = license.to_lowercase();
+        if lower.ends_with(".txt") || lower.ends_with(".md") || lower.ends_with("license") {
+            let license_path = skill.path.join(license);
+            if !license_path.exists() {
+                let line = find_yaml_line("license");
+                let mut diag = Diagnostic::warning(
+                    "skill-license-file-missing",
+                    format!(
+                        "license field references file '{}' but it does not exist in the skill directory",
+                        license
+                    ),
+                    path.clone(),
+                );
+                if let Some(l) = line {
+                    diag = diag.at_line(l);
+                }
+                diags.push(diag);
+            }
         }
     }
 
@@ -588,5 +634,136 @@ mod tests {
         };
         let diags = check(&skill);
         assert!(!diags.iter().any(|d| d.code == "skill-missing-frontmatter"));
+    }
+
+    #[test]
+    fn license_file_missing_reports_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\nlicense: LICENSE.txt\n---\n",
+        )
+        .unwrap();
+        // Don't create LICENSE.txt
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-license-file-missing"));
+    }
+
+    #[test]
+    fn license_file_exists_no_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\nlicense: LICENSE.txt\n---\n",
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("LICENSE.txt"), "MIT License\n").unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-license-file-missing"));
+    }
+
+    #[test]
+    fn license_name_not_file_no_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\nlicense: MIT\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-license-file-missing"));
+    }
+
+    #[test]
+    fn description_missing_trigger_reports_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: Processes PDF files and extracts text.\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "Processes PDF files and extracts text.".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-description-missing-trigger"));
+    }
+
+    #[test]
+    fn description_with_trigger_no_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: Extracts PDF text. Use when handling PDF documents.\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "Extracts PDF text. Use when handling PDF documents.".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(!diags
+            .iter()
+            .any(|d| d.code == "skill-description-missing-trigger"));
     }
 }

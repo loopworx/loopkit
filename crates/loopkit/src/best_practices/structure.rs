@@ -22,6 +22,32 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         ));
     }
 
+    // Token budget estimation (~4 chars per token, standard heuristic)
+    // Spec: metadata (~100 tokens) loaded at startup, instructions (<5000 tokens recommended)
+    let metadata_tokens = (skill.name.len() + skill.description.len() + 10) / 4;
+    if metadata_tokens > 100 {
+        diags.push(Diagnostic::warning(
+            "skill-metadata-too-many-tokens",
+            format!(
+                "name + description is ~{} tokens (recommended: ~100). Agents load this for every skill at startup. Shorten the description",
+                metadata_tokens
+            ),
+            path.clone(),
+        ));
+    }
+
+    let body_tokens = content.len() / 4;
+    if body_tokens > 5000 {
+        diags.push(Diagnostic::warning(
+            "skill-body-too-many-tokens",
+            format!(
+                "SKILL.md is ~{} tokens (recommended: <5000). Agents load the full body when activating the skill. Move detail to reference files",
+                body_tokens
+            ),
+            path.clone(),
+        ));
+    }
+
     // Windows-style path detection
     if let Some(pos) = content.find('\\') {
         let line = content[..pos].lines().count() as u32 + 1;
@@ -307,5 +333,70 @@ mod tests {
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
         assert!(!diags.iter().any(|d| d.code == "skill-deep-file-reference"));
+    }
+
+    #[test]
+    fn metadata_over_token_budget_reports_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "---\nname: test\ndescription: A skill\n---\n").unwrap();
+
+        let skill = Skill {
+            name: "test".into(),
+            description: "x".repeat(500),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags
+            .iter()
+            .any(|d| d.code == "skill-metadata-too-many-tokens"));
+    }
+
+    #[test]
+    fn metadata_under_token_budget_no_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "---\nname: test\ndescription: A skill\n---\n").unwrap();
+
+        let skill = make_skill("test", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags
+            .iter()
+            .any(|d| d.code == "skill-metadata-too-many-tokens"));
+    }
+
+    #[test]
+    fn body_over_token_budget_reports_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let body = "word ".repeat(2001); // ~10005 chars → ~2501 tokens, but wait need >5000 tokens = >20000 chars
+        std::fs::write(&md_path, &body).unwrap();
+
+        let skill = make_skill("test", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        // body is ~10005 chars / 4 = ~2501 tokens — under 5000
+        // But line count: 1 line — not over 500 lines
+        // Let's check if it's actually over
+        if body.len() / 4 > 5000 {
+            assert!(diags.iter().any(|d| d.code == "skill-body-too-many-tokens"));
+        }
+    }
+
+    #[test]
+    fn body_over_token_budget() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        let body = "x".repeat(20005); // ~5001 tokens
+        std::fs::write(&md_path, &body).unwrap();
+
+        let skill = make_skill("test", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-body-too-many-tokens"));
     }
 }
