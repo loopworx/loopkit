@@ -35,6 +35,24 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         );
     }
 
+    // Absolute path detection (POSIX)
+    let abs_re = Regex::new(r"\((/[^\)]+)\)").expect("hardcoded regex");
+    for cap in abs_re.captures_iter(&content) {
+        let abs_path = &cap[1];
+        let line = content[..cap.get(0).unwrap().start()].lines().count() as u32 + 1;
+        diags.push(
+            Diagnostic::error(
+                "skill-absolute-path",
+                format!(
+                    "SKILL.md references absolute path '{}'. Use relative paths from the skill root",
+                    abs_path
+                ),
+                path.clone(),
+            )
+            .at_line(line),
+        );
+    }
+
     // Time-sensitive language detection
     let time_re = Regex::new(
         r"(?i)(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}"
@@ -48,11 +66,28 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
         ).at_line(line));
     }
 
-    // Reference chain depth detection (A references B, B references C = depth 2+)
+    // Reference path depth check (spec: keep file references one level deep)
     let ref_re = Regex::new(r"\[([^\]]+)\]\(([^)]+\.md)\)").expect("hardcoded regex");
     let mut refs: Vec<String> = Vec::new();
     for cap in ref_re.captures_iter(&content) {
-        refs.push(cap[2].to_string());
+        let ref_path = &cap[2];
+        // Check for deeply nested paths (more than one directory level)
+        let depth = ref_path.matches('/').count();
+        if depth > 1 {
+            let line = content[..cap.get(0).unwrap().start()].lines().count() as u32 + 1;
+            diags.push(
+                Diagnostic::warning(
+                    "skill-deep-file-reference",
+                    format!(
+                        "File reference '{}' is more than one level deep. Keep references one level deep from SKILL.md",
+                        ref_path
+                    ),
+                    path.clone(),
+                )
+                .at_line(line),
+            );
+        }
+        refs.push(ref_path.to_string());
     }
     if !refs.is_empty() {
         let skill_dir = skill.path.clone();
@@ -228,5 +263,49 @@ mod tests {
         let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
         let diags = check(&skill);
         assert!(!diags.iter().any(|d| d.code == "skill-time-sensitive"));
+    }
+
+    #[test]
+    fn absolute_path_reports_error() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "See [ref](/absolute/path/to/ref.md)").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-absolute-path"));
+    }
+
+    #[test]
+    fn relative_path_no_error() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "See [ref](ref.md) and [ref2](subdir/ref2.md)").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-absolute-path"));
+    }
+
+    #[test]
+    fn deep_file_reference_reports_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "See [ref](a/b/c/deep.md)").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-deep-file-reference"));
+    }
+
+    #[test]
+    fn one_level_file_reference_no_warning() {
+        let dir = tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "See [ref](ref.md) and [ref2](subdir/ref2.md)").unwrap();
+
+        let skill = make_skill("test-skill", dir.path().to_path_buf(), md_path);
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-deep-file-reference"));
     }
 }

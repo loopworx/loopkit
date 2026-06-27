@@ -6,6 +6,16 @@ pub fn check(skill: &Skill) -> Vec<Diagnostic> {
 
     let content = std::fs::read_to_string(&path).unwrap_or_default();
 
+    // Check: frontmatter must exist (--- ... ---)
+    let has_frontmatter = content.starts_with("---");
+    if !has_frontmatter {
+        diags.push(Diagnostic::error(
+            "skill-missing-frontmatter",
+            "SKILL.md must start with YAML frontmatter (---)".into(),
+            path.clone(),
+        ));
+    }
+
     // Helper: find the line number of a YAML key in the frontmatter
     let find_yaml_line = |key: &str| -> Option<u32> {
         content.lines().enumerate().find_map(|(i, line)| {
@@ -349,7 +359,25 @@ mod tests {
 
     #[test]
     fn valid_skill_no_diagnostics() {
-        let skill = make_skill("test-skill", "Processes test data");
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: Processes test data\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "Processes test data".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
         let diags = check(&skill);
         assert!(diags.is_empty());
     }
@@ -512,5 +540,53 @@ mod tests {
         let skill = make_skill("anthropic-skill", "test");
         let diags = check(&skill);
         assert!(diags.iter().any(|d| d.code == "skill-name-reserved-word"));
+    }
+
+    #[test]
+    fn missing_frontmatter_reports_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(&md_path, "Just some content, no frontmatter.").unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(diags.iter().any(|d| d.code == "skill-missing-frontmatter"));
+        // Should return early — no other checks should fire
+        assert_eq!(diags.len(), 1);
+    }
+
+    #[test]
+    fn with_frontmatter_no_missing_frontmatter_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let md_path = dir.path().join("SKILL.md");
+        std::fs::write(
+            &md_path,
+            "---\nname: test-skill\ndescription: A test\n---\n",
+        )
+        .unwrap();
+
+        let skill = Skill {
+            name: "test-skill".into(),
+            description: "A test".into(),
+            level: String::new(),
+            owner: vec![],
+            category: String::new(),
+            path: dir.path().to_path_buf(),
+            skill_md: md_path,
+            sections: vec![],
+            states: vec![],
+        };
+        let diags = check(&skill);
+        assert!(!diags.iter().any(|d| d.code == "skill-missing-frontmatter"));
     }
 }
