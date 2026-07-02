@@ -124,6 +124,44 @@ Output:
 
 ---
 
+## GitHub Action
+
+Add loopkit validation to any skill repository's CI:
+
+```yaml
+# .github/workflows/validate.yml
+name: Validate
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loopworx/loopkit@v1
+```
+
+### With cargo
+
+```yaml
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: loopworx/loopkit@v1
+        with:
+          install-method: cargo
+```
+
+### Inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `path` | `.` | Path to the project directory to validate |
+| `version` | `latest` | loopkit version (`latest` or semver like `0.3.3`) |
+| `install-method` | `npm` | `npm` (pre-built binary, fast) or `cargo` (compile from source) |
+| `json` | `true` | Output results as JSON |
+| `verbose` | `false` | Print per-validator diagnostic counts |
+
+---
+
 ## What a Loop Language skill looks like
 
 ```

@@ -1,0 +1,67 @@
+name: 'LoopKit - Loop Language Validator'
+description: 'Validates agent skill repositories against the Loop Language spec'
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path to the project directory to validate'
+    required: false
+    default: '.'
+  version:
+    description: 'loopkit version to use ("latest" or a semver like "0.3.3")'
+    required: false
+    default: 'latest'
+  install-method:
+    description: 'npm (pre-built binary, fast) or cargo (compile from source)'
+    required: false
+    default: 'npm'
+  json:
+    description: 'Output results as JSON (recommended for CI)'
+    required: false
+    default: 'true'
+  verbose:
+    description: 'Print per-validator diagnostic counts'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate skill repository
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        cli_args="${{ inputs.path }}"
+        if [ "${{ inputs.json }}" = "true" ]; then
+          cli_args="$cli_args --json"
+        fi
+        if [ "${{ inputs.verbose }}" = "true" ]; then
+          cli_args="$cli_args --verbose"
+        fi
+
+        case "${{ inputs.install-method }}" in
+          npm)
+            if [ "${{ inputs.version }}" = "latest" ]; then
+              npx -y loopkit-cli $cli_args
+            else
+              npx -y "loopkit-cli@${{ inputs.version }}" $cli_args
+            fi
+            ;;
+          cargo)
+            echo "::group::Installing loopkit via cargo"
+            if [ "${{ inputs.version }}" = "latest" ]; then
+              cargo install loopkit
+            else
+              cargo install loopkit --version "${{ inputs.version }}"
+            fi
+            echo "::endgroup::"
+            loopkit $cli_args
+            ;;
+          *)
+            echo "::error::install-method must be 'npm' or 'cargo', got '${{ inputs.install-method }}'"
+            exit 1
+            ;;
+        esac
